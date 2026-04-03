@@ -1,97 +1,111 @@
 ---
-title: "Introduction"
-description: "Welcome to the new home for your documentation"
+title: "UnoCSS — Instant On-Demand Atomic CSS Engine"
+description: "The instant on-demand atomic CSS engine. Fully customizable, blazing fast, and framework-agnostic."
 ---
 
-## Setting up
+## Welcome to UnoCSS
 
-Get your documentation site up and running in minutes.
+UnoCSS is an instant, on-demand atomic CSS engine designed to be flexible and extensible. Unlike traditional CSS frameworks, UnoCSS has no core utilities — all CSS utilities are provided via composable presets, giving you complete control over your styling system.
 
-<Card
-  title="Start here"
-  icon="rocket"
-  href="/quickstart"
-  horizontal
->
-  Follow our three step quickstart guide.
-</Card>
+Whether you're migrating from Tailwind CSS, building a custom design system, or starting fresh, UnoCSS adapts to your workflow.
 
-## Make it yours
-
-Design a docs site that looks great and empowers your users.
-
-<Columns cols={2}>
-  <Card
-    title="Edit locally"
-    icon="pen-to-square"
-    href="/development"
-  >
-    Edit your docs locally and preview them in real time.
+<CardGroup cols={2}>
+  <Card title="Introduction" icon="book-open" href="/introduction">
+    Learn what UnoCSS is, how it works, and what makes it different from other CSS frameworks.
   </Card>
-  <Card
-    title="Customize your site"
-    icon="palette"
-    href="/essentials/settings"
-  >
-    Customize the design and colors of your site to match your brand.
+  <Card title="Installation" icon="download" href="/installation">
+    Get UnoCSS running in your project with Vite, Nuxt, Astro, Webpack, or as a CDN import.
   </Card>
-    <Card
-    title="Set up navigation"
-    icon="map"
-    href="/essentials/navigation"
-  >
-    Organize your docs to help users find what they need and succeed with your product.
+  <Card title="Configuration" icon="sliders" href="/config/overview">
+    Define rules, shortcuts, themes, and presets to build your custom design system.
   </Card>
-  <Card
-    title="API documentation"
-    icon="terminal"
-    href="/api-reference/introduction"
-  >
-    Auto-generate API documentation from OpenAPI specifications.
+  <Card title="Presets" icon="puzzle-piece" href="/presets/overview">
+    Explore official presets including Wind (Tailwind-compatible), Icons, Typography, and more.
   </Card>
-</Columns>
+</CardGroup>
 
-## Create beautiful pages
+## Get started in minutes
 
-Everything you need to create world-class documentation.
+<Steps>
+  <Step title="Install UnoCSS">
+    Add UnoCSS to your project using your preferred package manager and build tool integration.
 
-<Columns cols={2}>
-  <Card
-    title="Write with MDX"
-    icon="pen-fancy"
-    href="/essentials/markdown"
-  >
-    Use MDX to style your docs pages.
-  </Card>
-  <Card
-    title="Code samples"
-    icon="code"
-    href="/essentials/code"
-  >
-    Add sample code to demonstrate how to use your product.
-  </Card>
-  <Card
-    title="Images"
-    icon="image"
-    href="/essentials/images"
-  >
-    Display images and other media.
-  </Card>
-  <Card
-    title="Reusable snippets"
-    icon="recycle"
-    href="/essentials/reusable-snippets"
-  >
-    Write once and reuse across your docs.
-  </Card>
-</Columns>
+    ```bash
+    npm install -D unocss
+    ```
+  </Step>
+  <Step title="Configure your project">
+    Create a `uno.config.ts` file and choose your presets.
 
-## Need inspiration?
+    ```ts uno.config.ts
+    import { defineConfig, presetWind3 } from 'unocss'
 
-<Card
-  title="See complete examples"
-  icon="stars"
-  href="https://mintlify.com/customers"
->
-  Browse our showcase of exceptional documentation sites.
-</Card>
+    export default defineConfig({
+      presets: [
+        presetWind3(),
+      ],
+    })
+    ```
+  </Step>
+  <Step title="Add the plugin to your build tool">
+    Wire up UnoCSS in your build tool (example for Vite):
+
+    ```ts vite.config.ts
+    import UnoCSS from 'unocss/vite'
+    import { defineConfig } from 'vite'
+
+    export default defineConfig({
+      plugins: [
+        UnoCSS(),
+      ],
+    })
+    ```
+  </Step>
+  <Step title="Import the CSS entry">
+    Add the UnoCSS virtual import to your main entry file.
+
+    ```ts main.ts
+    import 'virtual:uno.css'
+    ```
+  </Step>
+</Steps>
+
+## Why UnoCSS?
+
+<CardGroup cols={3}>
+  <Card title="Instant" icon="bolt">
+    No parsing, no AST, no file scanning. UnoCSS is up to 5x faster than Windi CSS or Tailwind JIT.
+  </Card>
+  <Card title="Lightweight" icon="feather">
+    Zero dependencies and browser-friendly at ~6kb min+brotli.
+  </Card>
+  <Card title="Fully customizable" icon="paintbrush">
+    No hardcoded utilities. Define your own rules, shortcuts, and presets for any design system.
+  </Card>
+  <Card title="Pure CSS Icons" icon="icons">
+    Use any icon from Iconify as a single CSS class — no JavaScript required.
+  </Card>
+  <Card title="Rich integrations" icon="plug">
+    First-class support for Vite, Nuxt, Astro, Webpack, PostCSS, and CDN runtime.
+  </Card>
+  <Card title="Developer tools" icon="wrench">
+    Interactive playground, VS Code extension, inspector, and JetBrains plugin included.
+  </Card>
+</CardGroup>
+
+## Explore by topic
+
+<CardGroup cols={2}>
+  <Card title="Transformers" icon="wand-magic-sparkles" href="/transformers/variant-group">
+    Use variant groups, `@apply` directives, compile-class mode, and attributify JSX transforms.
+  </Card>
+  <Card title="Integrations" icon="link" href="/integrations/vite">
+    Connect UnoCSS to Vite, Nuxt, Astro, Webpack, PostCSS, or use it as a CDN runtime.
+  </Card>
+  <Card title="Core API Reference" icon="code" href="/reference/core">
+    Explore the programmatic API: `createGenerator()`, `UnoGenerator`, and type definitions.
+  </Card>
+  <Card title="Inspector & Tooling" icon="magnifying-glass" href="/reference/inspector">
+    Debug generated CSS interactively with the built-in inspector and editor extensions.
+  </Card>
+</CardGroup>

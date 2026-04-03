@@ -1,0 +1,329 @@
+---
+title: "Preset Icons"
+description: "Use any Iconify icon as a pure CSS class with UnoCSS."
+---
+
+`@unocss/preset-icons` lets you use any icon from [Iconify](https://iconify.design/) as a pure CSS utility class. Icons are rendered as CSS `mask` or `background-image` properties — no runtime JavaScript, no layout shift, no extra HTTP requests at runtime.
+
+## How it works
+
+Icons are referenced using the syntax `i-{collection}-{icon}` or `i-{collection}:{icon}`. The preset resolves the icon's SVG data and injects it as an inline CSS `mask-image` or `background-image`.
+
+```html
+<!-- A basic anchor icon from Phosphor icons -->
+<div class="i-ph-anchor-simple-thin" />
+
+<!-- An orange alarm from Material Design Icons -->
+<div class="i-mdi-alarm text-orange-400" />
+
+<!-- A large Vue logo -->
+<div class="i-logos-vue text-3xl" />
+
+<!-- Sun in light mode, Moon in dark mode, from Carbon -->
+<button class="i-carbon-sun dark:i-carbon-moon" />
+
+<!-- Twemoji of laugh, turns to tear on hovering -->
+<div class="i-twemoji-grinning-face-with-smiling-eyes hover:i-twemoji-face-with-tears-of-joy" />
+```
+
+Browse all available icons at [icones.js.org](https://icones.js.org/).
+
+## Installation
+
+<Steps>
+  <Step title="Install the preset and an icon collection">
+    Install `@unocss/preset-icons` along with at least one `@iconify-json/*` collection package:
+
+    <CodeGroup>
+      ```bash pnpm
+      pnpm add -D @unocss/preset-icons @iconify-json/mdi
+      ```
+      ```bash yarn
+      yarn add -D @unocss/preset-icons @iconify-json/mdi
+      ```
+      ```bash npm
+      npm install -D @unocss/preset-icons @iconify-json/mdi
+      ```
+      ```bash bun
+      bun add -D @unocss/preset-icons @iconify-json/mdi
+      ```
+    </CodeGroup>
+
+    Replace `@iconify-json/mdi` with the collection(s) you want — for example `@iconify-json/tabler`, `@iconify-json/ph`, `@iconify-json/carbon`.
+  </Step>
+  <Step title="Add to your config">
+    ```ts
+    import presetIcons from '@unocss/preset-icons'
+    import { defineConfig } from 'unocss'
+
+    export default defineConfig({
+      presets: [
+        presetIcons({ /* options */ }),
+        // ...other presets
+      ],
+    })
+    ```
+  </Step>
+</Steps>
+
+<Tip>
+This preset is included in the `unocss` package — you can import it from there directly:
+
+```ts
+import { presetIcons } from 'unocss'
+```
+</Tip>
+
+<Note>
+To install all Iconify collections at once (~130 MB), use `@iconify/json` instead of individual `@iconify-json/*` packages.
+</Note>
+
+## Sizing icons
+
+Icons default to `1em` (relative to the current font size). Control their size with text size utilities:
+
+```html
+<!-- Small icon -->
+<div class="i-mdi-home text-sm" />
+
+<!-- Large icon -->
+<div class="i-mdi-home text-3xl" />
+
+<!-- Explicit size -->
+<div class="i-mdi-home w-6 h-6" />
+```
+
+## Coloring icons
+
+For monochrome icons (those using `currentColor`), the icon color follows the text color:
+
+```html
+<!-- Red icon -->
+<div class="i-mdi-alarm text-red-500" />
+
+<!-- Teal icon -->
+<div class="i-mdi-alarm text-teal-400" />
+```
+
+Multi-color icons (logos, illustrations) have static colors baked in and do not respond to `text-*` utilities.
+
+## Rendering modes
+
+The preset automatically selects the rendering mode per icon:
+
+- **`mask`** — for monochrome icons; uses `background-color` + CSS `mask-image`. The icon color is controlled by `color` / `text-*` utilities.
+- **`bg`** — for colored icons; uses `background-image`. Colors are static.
+- **`auto`** (default) — chooses between `mask` and `bg` based on the icon's SVG content.
+
+Override the mode per icon with a query suffix:
+
+```html
+<!-- Force mask mode (allows coloring a normally static icon) -->
+<div class="i-vscode-icons:file-type-light-pnpm?mask text-red-300" />
+
+<!-- Force background-image mode -->
+<div class="i-mdi-alarm?bg" />
+```
+
+## Extra properties
+
+Provide default CSS properties applied to every generated icon class:
+
+```ts
+presetIcons({
+  extraProperties: {
+    'display': 'inline-block',
+    'vertical-align': 'middle',
+  },
+})
+```
+
+## Custom icon collections
+
+### Inline SVG
+
+Define custom icons directly in the configuration using `InlineCollection`:
+
+```ts
+presetIcons({
+  collections: {
+    custom: {
+      circle: '<svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="50"></circle></svg>',
+      // ...
+    },
+    carbon: () => import('@iconify-json/carbon/icons.json').then(i => i.default as any),
+  }
+})
+```
+
+Use it as `<span class="i-custom:circle"></span>`.
+
+### File system (Node.js)
+
+Load icons from your local file system using `FileSystemIconLoader` from `@iconify/utils`:
+
+```ts
+import fs from 'node:fs/promises'
+import { FileSystemIconLoader } from '@iconify/utils/lib/loader/node-loaders'
+import { defineConfig, presetIcons } from 'unocss'
+
+export default defineConfig({
+  presets: [
+    presetIcons({
+      collections: {
+        'my-icons': {
+          account: '<svg><!-- ... --></svg>',
+          settings: () => fs.readFile('./path/to/my-icon.svg', 'utf-8'),
+        },
+        'my-file-icons': FileSystemIconLoader(
+          './assets/icons',
+          svg => svg.replace(/#fff/, 'currentColor')
+        ),
+      }
+    })
+  ]
+})
+```
+
+### Browser (dynamic imports)
+
+For browser builds, provide collections via dynamic imports so they are bundled as async chunks:
+
+```ts
+import presetIcons from '@unocss/preset-icons/browser'
+
+export default defineConfig({
+  presets: [
+    presetIcons({
+      collections: {
+        carbon: () => import('@iconify-json/carbon/icons.json').then(i => i.default),
+        mdi: () => import('@iconify-json/mdi/icons.json').then(i => i.default),
+      }
+    })
+  ]
+})
+```
+
+Or fetch them from a CDN:
+
+```ts
+presetIcons({
+  cdn: 'https://esm.sh/'
+})
+```
+
+## Icon customizations
+
+Apply global transformations to SVG or individual icon properties using `customizations`:
+
+```ts
+// Add fill="currentColor" to all custom icons
+presetIcons({
+  customizations: {
+    transform(svg) {
+      return svg.replace(/#fff/, 'currentColor')
+    }
+  }
+})
+
+// Set a default size for all icons
+presetIcons({
+  customizations: {
+    customize(props) {
+      props.width = '2em'
+      props.height = '2em'
+      return props
+    }
+  }
+})
+
+// Per-collection or per-icon customization
+presetIcons({
+  customizations: {
+    iconCustomizer(collection, icon, props) {
+      if (collection === 'mdi' && icon === 'account') {
+        props.width = '2em'
+        props.height = '2em'
+      }
+    }
+  }
+})
+```
+
+## Accessibility
+
+Icons are visual elements — make sure they are accessible:
+
+```html
+<!-- Meaningful icon: provide an aria-label -->
+<a href="/profile" aria-label="Profile" class="i-ph:user-duotone"></a>
+
+<!-- Decorative icon: hide from screen readers -->
+<a href="/profile">
+  <span aria-hidden="true" class="i-ph:user-duotone"></span>
+  My Profile
+</a>
+```
+
+## Options
+
+### `prefix`
+
+- **Type:** `string | string[]`
+- **Default:** `'i-'`
+
+Class prefix for matching icon rules.
+
+### `scale`
+
+- **Type:** `number`
+- **Default:** `1`
+
+Scale factor relative to the current font size (`1em`).
+
+### `mode`
+
+- **Type:** `'mask' | 'bg' | 'auto'`
+- **Default:** `'auto'`
+
+Rendering mode for generated CSS icons.
+
+### `extraProperties`
+
+- **Type:** `Record<string, string>`
+- **Default:** `{}`
+
+Extra CSS properties applied to every generated icon class.
+
+### `collections`
+
+- **Type:** `Record<string, (() => Awaitable<IconifyJSON>) | undefined | CustomIconLoader | InlineCollection>`
+
+Custom icon collections. In Node.js, installed `@iconify-json/*` packages are detected automatically.
+
+### `autoInstall`
+
+- **Type:** `boolean`
+- **Default:** `false`
+
+Auto-install `@iconify-json/*` packages on demand when usages are detected. Node.js only.
+
+### `warn`
+
+- **Type:** `boolean`
+- **Default:** `false`
+
+Emit a warning when a matched icon cannot be found.
+
+### `cdn`
+
+- **Type:** `string`
+
+Load icons from a CDN URL. Must start with `https://` and end with `/`. Recommended: `'https://esm.sh/'`.
+
+### `unit`
+
+- **Type:** `string`
+- **Default:** `'em'`
+
+Unit for icon sizing.

@@ -1,0 +1,379 @@
+---
+title: "Installation"
+description: "Install UnoCSS in your project with Vite, Nuxt, Astro, Webpack, or as a CDN import."
+---
+
+## Prerequisites
+
+- Node.js 14 or later
+- A supported build tool or framework (Vite, Nuxt, Astro, webpack), or no build step at all for the CDN runtime
+
+<Tip>
+  For the best IDE experience, install the [UnoCSS VS Code extension](https://marketplace.visualstudio.com/items?itemName=antfu.unocss). It provides autocomplete, hover previews, and syntax highlighting for UnoCSS utilities.
+</Tip>
+
+---
+
+## Vite
+
+The Vite plugin ships with the `unocss` package and is the most common way to use UnoCSS.
+
+<Steps>
+  <Step title="Install the package">
+    <CodeGroup>
+      ```bash pnpm
+      pnpm add -D unocss
+      ```
+      ```bash yarn
+      yarn add -D unocss
+      ```
+      ```bash npm
+      npm install -D unocss
+      ```
+      ```bash bun
+      bun add -D unocss
+      ```
+    </CodeGroup>
+  </Step>
+  <Step title="Add the plugin to vite.config.ts">
+    ```ts
+    // vite.config.ts
+    import UnoCSS from 'unocss/vite'
+    import { defineConfig } from 'vite'
+
+    export default defineConfig({
+      plugins: [
+        UnoCSS(),
+      ],
+    })
+    ```
+  </Step>
+  <Step title="Create uno.config.ts">
+    ```ts
+    // uno.config.ts
+    import { defineConfig } from 'unocss'
+
+    export default defineConfig({
+      // ...UnoCSS options
+    })
+    ```
+  </Step>
+  <Step title="Import the virtual stylesheet in your entry file">
+    ```ts
+    // main.ts
+    import 'virtual:uno.css'
+    ```
+  </Step>
+</Steps>
+
+<Note>
+  The Vite plugin defaults to `global` mode, which injects a single global stylesheet into `index.html`. Additional modes (`vue-scoped`, `shadow-dom`, `per-module`, `dist-chunk`) are available for specific use cases.
+</Note>
+
+---
+
+## Nuxt
+
+<Steps>
+  <Step title="Install the packages">
+    <CodeGroup>
+      ```bash pnpm
+      pnpm add -D unocss @unocss/nuxt
+      ```
+      ```bash yarn
+      yarn add -D unocss @unocss/nuxt
+      ```
+      ```bash npm
+      npm install -D unocss @unocss/nuxt
+      ```
+      ```bash bun
+      bun add -D unocss @unocss/nuxt
+      ```
+    </CodeGroup>
+  </Step>
+  <Step title="Add the module to nuxt.config.ts">
+    ```ts
+    // nuxt.config.ts
+    export default defineNuxtConfig({
+      modules: [
+        '@unocss/nuxt',
+      ],
+    })
+    ```
+  </Step>
+  <Step title="Create uno.config.ts">
+    ```ts
+    // uno.config.ts
+    import { defineConfig } from 'unocss'
+
+    export default defineConfig({
+      // ...UnoCSS options
+    })
+    ```
+
+    The `uno.css` entry is automatically injected by the module — you do not need to add an import manually.
+  </Step>
+</Steps>
+
+---
+
+## Astro
+
+<Steps>
+  <Step title="Install the packages">
+    <CodeGroup>
+      ```bash pnpm
+      pnpm add -D unocss @unocss/astro
+      ```
+      ```bash yarn
+      yarn add -D unocss @unocss/astro
+      ```
+      ```bash npm
+      npm install -D unocss @unocss/astro
+      ```
+      ```bash bun
+      bun add -D unocss @unocss/astro
+      ```
+    </CodeGroup>
+  </Step>
+  <Step title="Add the integration to astro.config.ts">
+    ```ts
+    // astro.config.ts
+    import { defineConfig } from 'astro/config'
+    import UnoCSS from 'unocss/astro'
+
+    export default defineConfig({
+      integrations: [
+        UnoCSS(),
+      ],
+    })
+    ```
+  </Step>
+  <Step title="Create uno.config.ts">
+    ```ts
+    // uno.config.ts
+    import { defineConfig } from 'unocss'
+
+    export default defineConfig({
+      // ...UnoCSS options
+    })
+    ```
+  </Step>
+</Steps>
+
+**Optional: browser style reset**
+
+By default no style reset is injected. To add one, install `@unocss/reset` and enable `injectReset`:
+
+```ts
+// astro.config.ts
+import { defineConfig } from 'astro/config'
+import UnoCSS from 'unocss/astro'
+
+export default defineConfig({
+  integrations: [
+    UnoCSS({ injectReset: true }),
+  ],
+})
+```
+
+<Note>
+  `client:only` components must be placed in the `components` folder or added to UnoCSS's `content` config to be processed.
+</Note>
+
+---
+
+## Webpack
+
+<Warning>
+  `@unocss/webpack` requires `style-loader` and `css-loader` to handle CSS files. This plugin currently only supports `global` mode and does not come with any default presets — you must configure them in `uno.config.ts`.
+</Warning>
+
+<Steps>
+  <Step title="Install the package">
+    <CodeGroup>
+      ```bash pnpm
+      pnpm add -D @unocss/webpack
+      ```
+      ```bash yarn
+      yarn add -D @unocss/webpack
+      ```
+      ```bash npm
+      npm install -D @unocss/webpack
+      ```
+      ```bash bun
+      bun add -D @unocss/webpack
+      ```
+    </CodeGroup>
+  </Step>
+  <Step title="Add the plugin to webpack.config.js">
+    UnoCSS is ESM-only from v0.59.0 onward, so use a dynamic import:
+
+    ```js
+    // webpack.config.js (webpack 5)
+    module.exports = function () {
+      return import('@unocss/webpack').then(({ default: UnoCSS }) => ({
+        plugins: [
+          UnoCSS()
+        ],
+        optimization: {
+          realContentHash: true
+        }
+      }))
+    }
+    ```
+  </Step>
+  <Step title="Create uno.config.ts">
+    ```ts
+    // uno.config.ts
+    import { defineConfig } from 'unocss'
+
+    export default defineConfig({
+      // ...UnoCSS options
+    })
+    ```
+  </Step>
+  <Step title="Import uno.css in your entry file">
+    ```ts
+    // main.ts
+    import 'uno.css'
+    ```
+  </Step>
+</Steps>
+
+---
+
+## CDN runtime (no build step)
+
+The CDN runtime runs UnoCSS directly in the browser. It detects DOM changes and generates styles on the fly — no build tooling needed.
+
+Add the script tag to your HTML:
+
+```html
+<!-- index.html -->
+<script src="https://cdn.jsdelivr.net/npm/@unocss/runtime"></script>
+```
+
+To configure UnoCSS, define `window.__unocss` before loading the runtime:
+
+```html
+<script>
+  window.__unocss = {
+    rules: [
+      // custom rules...
+    ],
+    presets: [
+      // custom presets...
+    ],
+  }
+</script>
+<script src="https://cdn.jsdelivr.net/npm/@unocss/runtime"></script>
+```
+
+By default the Wind3 preset is applied. Specialized builds are also available:
+
+| Build | Script |
+| --- | --- |
+| Wind3 preset (default) | `@unocss/runtime/uno.global.js` |
+| Wind3 + Attributify | `@unocss/runtime/attributify.global.js` |
+| Mini + Attributify | `@unocss/runtime/mini.global.js` |
+| Core only | `@unocss/runtime/core.global.js` |
+
+**Preventing flash of unstyled content (FOUC)**
+
+Since styles are generated after the DOM is ready, elements may briefly appear unstyled. Use the `un-cloak` attribute to hide elements until UnoCSS applies their styles:
+
+```css
+[un-cloak] {
+  display: none;
+}
+```
+
+```html
+<div class="text-blue-500" un-cloak>
+  This text will only be visible once UnoCSS has applied styles.
+</div>
+```
+
+---
+
+## CLI
+
+The CLI is included with the `unocss` package. Use it to extract utilities from any set of files without a build framework.
+
+```bash
+unocss "src/**/*.html" --watch
+```
+
+Common options:
+
+| Option | Description |
+| --- | --- |
+| `-o, --out-file <file>` | Output CSS filename (default: `uno.css`) |
+| `-w, --watch` | Watch for file changes |
+| `-m, --minify` | Minify the generated CSS |
+| `--preset wind3\|wind4` | Use a built-in preset when no config file is present |
+| `-c, --config [file]` | Path to a custom config file |
+
+Example `package.json` scripts:
+
+```json
+{
+  "scripts": {
+    "dev": "unocss \"src/**/*.html\" --watch",
+    "build": "unocss \"src/**/*.html\""
+  }
+}
+```
+
+<Note>
+  From v66.6.0, the CLI no longer ships a default preset. You must either pass `--preset wind3` or `--preset wind4`, or configure presets in `uno.config.ts`.
+</Note>
+
+---
+
+## Config file
+
+All integrations pick up `uno.config.ts` (or `uno.config.js`, `unocss.config.ts`) automatically from the project root. A full-featured config file looks like this:
+
+```ts
+// uno.config.ts
+import {
+  defineConfig,
+  presetAttributify,
+  presetIcons,
+  presetTypography,
+  presetWebFonts,
+  presetWind3,
+  transformerDirectives,
+  transformerVariantGroup,
+} from 'unocss'
+
+export default defineConfig({
+  shortcuts: [
+    // ...
+  ],
+  theme: {
+    colors: {
+      // ...
+    },
+  },
+  presets: [
+    presetWind3(),
+    presetAttributify(),
+    presetIcons(),
+    presetTypography(),
+    presetWebFonts({
+      fonts: {
+        // ...
+      },
+    }),
+  ],
+  transformers: [
+    transformerDirectives(),
+    transformerVariantGroup(),
+  ],
+})
+```
+
+Using a dedicated config file (rather than inline options in `vite.config.ts`) gives you better IDE support, HMR, and compatibility with tools like the ESLint plugin.

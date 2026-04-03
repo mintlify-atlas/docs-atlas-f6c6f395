@@ -1,0 +1,250 @@
+---
+title: "Transformer Directives"
+description: "Use @apply and @screen CSS directives with UnoCSS utilities."
+---
+
+The directives transformer adds support for `@apply`, `@screen`, `theme()`, and `icon()` inside CSS files. This lets you use UnoCSS utilities and theme values directly in your stylesheets instead of only in HTML class attributes.
+
+## Installation
+
+<Steps>
+  <Step title="Install the package">
+    <CodeGroup>
+      ```bash pnpm
+      pnpm add -D @unocss/transformer-directives
+      ```
+
+      ```bash yarn
+      yarn add -D @unocss/transformer-directives
+      ```
+
+      ```bash npm
+      npm install -D @unocss/transformer-directives
+      ```
+
+      ```bash bun
+      bun add -D @unocss/transformer-directives
+      ```
+    </CodeGroup>
+
+    <Tip>
+      This transformer is included in the `unocss` package. If you already have `unocss` installed, you can import it directly:
+
+      ```ts
+      import { transformerDirectives } from 'unocss'
+      ```
+    </Tip>
+  </Step>
+
+  <Step title="Add to your UnoCSS config">
+    ```ts uno.config.ts
+    import transformerDirectives from '@unocss/transformer-directives'
+    import { defineConfig } from 'unocss'
+
+    export default defineConfig({
+      // ...
+      transformers: [
+        transformerDirectives(),
+      ],
+    })
+    ```
+  </Step>
+</Steps>
+
+## `@apply`
+
+Use `@apply` to inline UnoCSS utilities inside a CSS rule. This is useful when you need to style elements that you can't add classes to directly, or when you want to group styles under a semantic class name.
+
+<CodeGroup>
+  ```css Before
+  .custom-div {
+    @apply text-center my-0 font-medium;
+  }
+  ```
+
+  ```css After
+  .custom-div {
+    margin-top: 0rem;
+    margin-bottom: 0rem;
+    text-align: center;
+    font-weight: 500;
+  }
+  ```
+</CodeGroup>
+
+### Using variants with `@apply`
+
+When applying utilities that contain `:` (such as hover states or responsive variants), wrap the value in quotes:
+
+```css
+.custom-div {
+  @apply 'hover:text-red hover:font-bold';
+}
+```
+
+### CSS custom property alternative
+
+To keep your CSS compatible with standard parsers that don't understand `@apply`, use the `--at-apply` custom property instead:
+
+```css
+.custom-div {
+  --at-apply: text-center my-0 font-medium;
+}
+```
+
+The following aliases are enabled by default:
+
+```js
+transformerDirectives({
+  // default aliases — all three are active out of the box
+  applyVariable: ['--at-apply', '--uno-apply', '--uno'],
+
+  // disable the custom property alternative entirely:
+  // applyVariable: false
+})
+```
+
+When the value contains `:`, quote the whole string:
+
+```css
+.custom-div {
+  --at-apply: 'hover:text-red hover:font-bold';
+}
+```
+
+## `@screen`
+
+The `@screen` directive lets you write responsive styles using the breakpoint names defined in your `theme.breakpoints` instead of raw pixel values.
+
+### Min-width breakpoints
+
+<CodeGroup>
+  ```css Before
+  .grid {
+    --uno: grid grid-cols-2;
+  }
+  @screen xs {
+    .grid {
+      --uno: grid-cols-1;
+    }
+  }
+  @screen sm {
+    .grid {
+      --uno: grid-cols-3;
+    }
+  }
+  ```
+
+  ```css After
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  @media (min-width: 320px) {
+    .grid {
+      grid-template-columns: repeat(1, minmax(0, 1fr));
+    }
+  }
+  @media (min-width: 640px) {
+    .grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+  ```
+</CodeGroup>
+
+### Max-width breakpoints (`lt-`)
+
+Use the `lt-` prefix to target viewports *below* a breakpoint (max-width):
+
+<CodeGroup>
+  ```css Before
+  @screen lt-xs {
+    .grid { --uno: grid-cols-1; }
+  }
+  @screen lt-sm {
+    .grid { --uno: grid-cols-3; }
+  }
+  ```
+
+  ```css After
+  @media (max-width: 319.9px) {
+    .grid { grid-template-columns: repeat(1, minmax(0, 1fr)); }
+  }
+  @media (max-width: 639.9px) {
+    .grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  }
+  ```
+</CodeGroup>
+
+### Range breakpoints (`at-`)
+
+Use the `at-` prefix to target a specific breakpoint range (between this breakpoint and the next):
+
+<CodeGroup>
+  ```css Before
+  @screen at-xs {
+    .grid { --uno: grid-cols-1; }
+  }
+  @screen at-xl {
+    .grid { --uno: grid-cols-3; }
+  }
+  @screen at-xxl {
+    .grid { --uno: grid-cols-4; }
+  }
+  ```
+
+  ```css After
+  @media (min-width: 320px) and (max-width: 639.9px) {
+    .grid { grid-template-columns: repeat(1, minmax(0, 1fr)); }
+  }
+  @media (min-width: 1280px) and (max-width: 1535.9px) {
+    .grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  }
+  @media (min-width: 1536px) {
+    .grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  }
+  ```
+</CodeGroup>
+
+## `theme()`
+
+Use the `theme()` function to reference values from your UnoCSS theme configuration using dot notation.
+
+<CodeGroup>
+  ```css Before
+  .btn-blue {
+    background-color: theme('colors.blue.500');
+  }
+  ```
+
+  ```css After
+  .btn-blue {
+    background-color: #3b82f6;
+  }
+  ```
+</CodeGroup>
+
+## `icon()`
+
+Use the `icon()` function to inline an icon as a CSS `background-image`. The icon is rendered as a data URI containing the SVG.
+
+<Warning>
+  `icon()` depends on `@unocss/preset-icons`. Make sure you have added that preset before using this function.
+</Warning>
+
+```css
+.icon {
+  background-image: icon('i-carbon-sun');
+}
+```
+
+To customize the icon color, pass a second argument:
+
+```css
+.icon {
+  background-image: icon('i-carbon-moon', '#fff');
+  /* or use a theme color: */
+  background-image: icon('i-carbon-moon', 'theme("colors.red.500")');
+}
+```

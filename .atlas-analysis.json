@@ -1,24 +1,11 @@
 {
-  "$schema": "https://mintlify.com/docs.json",
-  "name": "UnoCSS",
+  "projectType": "framework",
+  "projectName": "UnoCSS",
+  "projectDescription": "An instant on-demand atomic CSS engine with a fully customizable preset and plugin system.",
   "theme": "willow",
-  "colors": {
-    "primary": "#848484",
-    "light": "#4c4c4c",
-    "dark": "#cccccc"
-  },
-  "favicon": "https://media.brand.dev/b1de6e43-a922-4072-b8d1-11ecaf1dc1f3.svg",
-  "navbar": {
-    "primary": {
-      "type": "github",
-      "href": "https://github.com/unocss/unocss"
-    }
-  },
-  "footer": {
-    "socials": {
-      "github": "https://github.com/unocss/unocss"
-    }
-  },
+  "primaryColor": "#848484",
+  "lightColor": "#4c4c4c",
+  "darkColor": "#cccccc",
   "navigation": {
     "tabs": [
       {
@@ -100,5 +87,38 @@
         ]
       }
     ]
-  }
+  },
+  "keyFeatures": [
+    "Instant on-demand CSS generation — no parsing, no AST scanning, 5x faster than alternatives",
+    "Fully customizable preset system — all utilities are provided via composable presets",
+    "Pure CSS icons via @unocss/preset-icons supporting any Iconify icon set",
+    "Attributify mode to group utilities in HTML attributes",
+    "Transformers for variant groups, CSS directives (@apply), and compile-class optimization",
+    "First-class integrations with Vite, Nuxt, Astro, Webpack, PostCSS, and CDN runtime",
+    "Interactive docs, playground, and VS Code / JetBrains extension for developer tooling",
+    "Shortcuts to compose and alias utility classes dynamically"
+  ],
+  "publicApiSurface": [
+    "defineConfig()",
+    "presetWind3()",
+    "presetWind4()",
+    "presetMini()",
+    "presetAttributify()",
+    "presetIcons()",
+    "presetTypography()",
+    "presetWebFonts()",
+    "presetTagify()",
+    "transformerVariantGroup()",
+    "transformerDirectives()",
+    "transformerCompileClass()",
+    "transformerAttributifyJsx()",
+    "createGenerator()",
+    "UnoGenerator",
+    "UserConfig",
+    "Preset",
+    "Rule",
+    "Shortcut",
+    "Variant",
+    "Extractor"
+  ]
 }

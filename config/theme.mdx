@@ -1,0 +1,186 @@
+---
+title: "Theme"
+description: "Define shared design tokens and theme variables in UnoCSS."
+---
+
+UnoCSS supports a theming system similar to Tailwind CSS and Windi CSS. The `theme` object is a plain JavaScript object that holds shared design tokens — colors, spacing, font sizes, breakpoints, and anything else you want to reuse across rules.
+
+## Defining theme values
+
+Add a `theme` key to your config. Its value is deep-merged with the theme provided by any active presets.
+
+```ts
+// uno.config.ts
+import { defineConfig } from 'unocss'
+
+export default defineConfig({
+  theme: {
+    colors: {
+      veryCool: '#0000ff',          // class="text-very-cool"
+      brand: {
+        primary: 'hsl(var(--hue, 217) 78% 51%)', // class="bg-brand-primary"
+        DEFAULT: '#942192',          // class="bg-brand"
+      },
+    },
+  },
+})
+```
+
+<Note>
+  The `theme` object is always available on `context.theme` during rule and
+  variant processing — you never need to import it separately.
+</Note>
+
+## Using theme values in rules
+
+Access `theme` through the second argument of a dynamic rule function.
+
+```ts
+rules: [
+  [/^text-(.*)$/, ([, c], { theme }) => {
+    if (theme.colors[c])
+      return { color: theme.colors[c] }
+  }],
+]
+```
+
+## Using theme values in variants
+
+```ts
+variants: [
+  {
+    name: 'variant-name',
+    match(matcher, { theme }) {
+      // use theme.breakpoints, theme.colors, etc.
+    },
+  },
+]
+```
+
+## Using theme values in shortcuts
+
+```ts
+shortcuts: [
+  [/^badge-(.*)$/, ([, c], { theme }) => {
+    if (Object.keys(theme.colors).includes(c))
+      return `bg-${c}4:10 text-${c}5 rounded`
+  }],
+]
+```
+
+## Breakpoints
+
+Define custom breakpoints under `theme.breakpoints`. The built-in responsive variants (`sm:`, `md:`, `lg:`, etc.) read from this key.
+
+<Warning>
+  Providing a custom `breakpoints` object replaces the preset's default
+  breakpoints entirely — it does not merge with them. Use `extendTheme` if you
+  want to keep the defaults and only add or override specific values.
+</Warning>
+
+```ts
+theme: {
+  breakpoints: {
+    sm: '320px',
+    md: '640px',
+  },
+}
+```
+
+With this config only `sm:` and `md:` variant prefixes are available.
+
+Use the same unit across all breakpoints. UnoCSS sorts breakpoints by size numerically and cannot compare values in different units (e.g. `px` vs `rem`).
+
+```ts
+theme: {
+  breakpoints: {
+    sm: '320px',
+    md: `${40 * 16}px`, // convert rem to px for consistent sorting
+    lg: '960px',
+  },
+}
+```
+
+<Note>
+  `verticalBreakpoints` works the same as `breakpoints` but applies to
+  height-based (vertical) responsive variants.
+</Note>
+
+## `extendTheme` — deep-merge and mutate
+
+`extendTheme` receives the fully merged theme (your `theme` object already merged with presets) and lets you mutate or replace it.
+
+### Mutating the theme in place
+
+```ts
+extendTheme: (theme) => {
+  theme.colors.veryCool = '#0000ff'
+  theme.colors.brand = {
+    primary: 'hsl(var(--hue, 217) 78% 51%)',
+  }
+  // no return value — mutation is applied directly
+}
+```
+
+### Returning a new theme object
+
+Return a new object to replace the theme entirely. Use spread syntax to preserve fields you are not overriding.
+
+```ts
+extendTheme: (theme) => {
+  return {
+    ...theme,
+    colors: {
+      ...theme.colors,
+      veryCool: '#0000ff',
+      brand: {
+        primary: 'hsl(var(--hue, 217) 78% 51%)',
+      },
+    },
+  }
+}
+```
+
+### Extending breakpoints without replacing them
+
+```ts
+extendTheme: (theme) => {
+  return {
+    ...theme,
+    breakpoints: {
+      ...theme.breakpoints, // keep preset defaults
+      sm: '320px',
+      md: '640px',
+    },
+  }
+}
+```
+
+`extendTheme` also accepts an array of functions, each of which runs in sequence:
+
+```ts
+extendTheme: [
+  (theme) => { theme.colors.brand = '#0000ff' },
+  (theme) => { theme.spacing.huge = '128px' },
+]
+```
+
+## How presets contribute to theme
+
+Each preset can declare its own `theme` object. When multiple presets are active UnoCSS deep-merges all theme objects in the order the presets are listed. The user-level `theme` is merged last and therefore takes precedence.
+
+```
+preset-a.theme  →  preset-b.theme  →  user theme
+          (deep merge, later wins)
+```
+
+After merging, all `extendTheme` functions run in order (preset functions first, then the user function).
+
+## Type signature
+
+```ts
+type ThemeExtender<Theme> = (
+  theme: Theme,
+  config: Readonly<ResolvedConfig<Theme>>
+) => Theme | void
+```

@@ -1,0 +1,278 @@
+---
+title: "Preset Attributify"
+description: "Group UnoCSS utilities in HTML attributes with attributify mode."
+---
+
+`@unocss/preset-attributify` enables attributify mode, which lets you group related utilities into dedicated HTML attributes instead of accumulating them all in the `class` attribute.
+
+## What is attributify mode?
+
+Long `class` strings are hard to read and maintain. Consider a styled button:
+
+```html
+<button
+  class="bg-blue-400 hover:bg-blue-500 text-sm text-white font-mono font-light py-2 px-4 rounded border-2 border-blue-200 dark:bg-blue-500 dark:hover:bg-blue-600"
+>
+  Button
+</button>
+```
+
+With attributify mode, you can split utilities by prefix into separate attributes:
+
+```html
+<button
+  bg="blue-400 hover:blue-500 dark:blue-500 dark:hover:blue-600"
+  text="sm white"
+  font="mono light"
+  p="y-2 x-4"
+  border="2 rounded blue-200"
+>
+  Button
+</button>
+```
+
+For example, `text-sm text-white` becomes `text="sm white"` — the prefix is written once as the attribute name.
+
+## Installation
+
+<Steps>
+  <Step title="Install the package">
+    <CodeGroup>
+      ```bash pnpm
+      pnpm add -D @unocss/preset-attributify
+      ```
+      ```bash yarn
+      yarn add -D @unocss/preset-attributify
+      ```
+      ```bash npm
+      npm install -D @unocss/preset-attributify
+      ```
+      ```bash bun
+      bun add -D @unocss/preset-attributify
+      ```
+    </CodeGroup>
+  </Step>
+  <Step title="Add to your config">
+    ```ts
+    import presetAttributify from '@unocss/preset-attributify'
+    import { defineConfig } from 'unocss'
+
+    export default defineConfig({
+      presets: [
+        presetAttributify({ /* preset options */ }),
+        // ...
+      ],
+    })
+    ```
+  </Step>
+</Steps>
+
+<Tip>
+This preset is included in the `unocss` package — you can import it from there directly:
+
+```ts
+import { presetAttributify } from 'unocss'
+```
+</Tip>
+
+## Prefix self-referencing
+
+Some utilities share their name with a prefix — for example, `flex`, `grid`, and `border`. Use the special `~` value to self-reference the prefix:
+
+```html
+<!-- class-based -->
+<button class="border border-red">Button</button>
+
+<!-- attributify equivalent -->
+<button border="~ red">Button</button>
+```
+
+## Valueless attributify
+
+This preset also supports attributes without values — utilities can be written directly as attribute names on the element:
+
+```html
+<!-- class-based -->
+<div class="m-2 rounded text-teal-400" />
+
+<!-- valueless attributify -->
+<div m-2 rounded text-teal-400 />
+```
+
+<Note>
+In JSX, `<div foo>` is compiled to `<div foo={true}>`, which breaks UnoCSS's extractor. Use [`@unocss/transformer-attributify-jsx`](/transformers/attributify-jsx) alongside this preset to handle that case.
+</Note>
+
+## Handling attribute conflicts
+
+If an attribute name conflicts with a native HTML element or component property, prefix it with `un-`:
+
+```html
+<!-- conflicts with the anchor element's `text` prop -->
+<a text="red">This conflicts with links' text prop</a>
+
+<!-- use the un- prefix to disambiguate -->
+<a un-text="red">Text color to red</a>
+```
+
+The prefix is optional by default. To require it for all attributify utilities:
+
+```ts
+presetAttributify({
+  prefix: 'un-',
+  prefixedOnly: true,
+})
+```
+
+To exclude specific attributes from attributify extraction entirely:
+
+```ts
+presetAttributify({
+  ignoreAttributes: [
+    'text'
+    // ...
+  ]
+})
+```
+
+## TypeScript support
+
+Create a `shims.d.ts` (or similar declarations file) to add type support for attributify attributes in your framework. The built-in types cover common attributes from `@unocss/preset-wind3`.
+
+### React
+
+```ts
+import type { AttributifyAttributes } from '@unocss/preset-attributify'
+
+declare module 'react' {
+  interface HTMLAttributes<T> extends AttributifyAttributes {}
+}
+```
+
+### Vue 3
+
+```ts
+import type { AttributifyAttributes } from '@unocss/preset-attributify'
+
+declare module '@vue/runtime-dom' {
+  interface HTMLAttributes extends AttributifyAttributes {}
+}
+```
+
+For Vue with Volar (v0.36+), which enforces strict attribute types, you can also opt out completely:
+
+```ts
+// html.d.ts
+declare module '@vue/runtime-dom' {
+  interface HTMLAttributes {
+    [key: string]: any
+  }
+}
+declare module '@vue/runtime-core' {
+  interface AllowedComponentProps {
+    [key: string]: any
+  }
+}
+export {}
+```
+
+### SolidJS
+
+```ts
+import type { AttributifyAttributes } from '@unocss/preset-attributify'
+
+declare module 'solid-js' {
+  namespace JSX {
+    interface HTMLAttributes<T> extends AttributifyAttributes {}
+  }
+}
+```
+
+### Svelte & SvelteKit
+
+```ts
+declare namespace svelteHTML {
+  import type { AttributifyAttributes } from '@unocss/preset-attributify'
+
+  type HTMLAttributes = AttributifyAttributes
+}
+```
+
+### Astro
+
+```ts
+import type { AttributifyAttributes } from '@unocss/preset-attributify'
+
+declare global {
+  namespace astroHTML.JSX {
+    interface HTMLAttributes extends AttributifyAttributes { }
+  }
+}
+```
+
+### Preact
+
+```ts
+import type { AttributifyAttributes } from '@unocss/preset-attributify'
+
+declare module 'preact' {
+  namespace JSX {
+    interface HTMLAttributes extends AttributifyAttributes {}
+  }
+}
+```
+
+### Using a custom prefix
+
+If you use a custom `prefix` in the preset options, use `AttributifyNames` to type your attributes:
+
+```ts
+import type { AttributifyNames } from '@unocss/preset-attributify'
+
+type Prefix = 'uno:' // change to your prefix
+
+interface HTMLAttributes extends Partial<Record<AttributifyNames<Prefix>, string>> {}
+```
+
+## Options
+
+### `strict`
+
+- **Type:** `boolean`
+- **Default:** `false`
+
+Only generate CSS for attributify or class — not both.
+
+### `prefix`
+
+- **Type:** `string`
+- **Default:** `'un-'`
+
+The prefix used to scope attributify attributes when `prefixedOnly` is enabled.
+
+### `prefixedOnly`
+
+- **Type:** `boolean`
+- **Default:** `false`
+
+Only match attributes that start with the configured `prefix`.
+
+### `nonValuedAttribute`
+
+- **Type:** `boolean`
+- **Default:** `true`
+
+Support matching valueless attributes (e.g. `<div rounded />`).
+
+### `ignoreAttributes`
+
+- **Type:** `string[]`
+
+A list of attribute names to exclude from attributify extraction.
+
+### `trueToNonValued`
+
+- **Type:** `boolean`
+- **Default:** `false`
+
+Treat attributes with value `true` in the DOM as valueless attributify matches. Useful for frameworks (e.g. Vue, Svelte) that serialize valueless attributes as `true`. Note: enabling this breaks any utility name that ends in `true`.

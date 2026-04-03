@@ -1,0 +1,82 @@
+---
+title: "Inspector"
+description: "Inspect and debug UnoCSS generated CSS interactively during development."
+---
+
+The UnoCSS Inspector is an interactive debug UI that lets you explore exactly which utilities are matched in each file, what CSS they produce, and test arbitrary utility strings against your current configuration.
+
+## Accessing the inspector
+
+The inspector is bundled with `unocss` and `@unocss/vite`. No separate installation is needed. Start your Vite dev server and visit:
+
+```
+http://localhost:5173/__unocss
+```
+
+<Note>
+  The inspector is only available in Vite dev mode. It is not included in production builds.
+</Note>
+
+## What the inspector shows
+
+### Matched utilities
+
+The **Overview** tab lists every utility token found in your project and the CSS it generated. You can see which rules matched, which layer a utility belongs to, and how many times a token appears across your source files.
+
+### Per-file CSS
+
+The **Files** tab shows a module graph of all scanned files. Selecting a file displays:
+
+- The raw source code with matched utilities highlighted
+- The CSS generated specifically for that file's tokens
+
+This makes it easy to trace why a particular class produces (or does not produce) CSS.
+
+### REPL
+
+The inspector includes a live REPL where you can type any utility string and immediately see the CSS it would generate. The REPL runs against your actual configuration, so custom rules, presets, and theme values are all taken into account.
+
+## Debugging missing utilities
+
+If a utility is not appearing in your output, the inspector can help narrow down the cause:
+
+<Steps>
+  <Step title="Check the Files tab">
+    Select the file where you expect the utility to appear. Verify that UnoCSS is scanning that file at all — if it does not appear in the module list, check your `content.pipeline` include patterns.
+  </Step>
+  <Step title="Try the REPL">
+    Type the utility string directly into the REPL. If the REPL produces CSS, the utility is valid but may not be getting extracted from your source. If the REPL produces nothing, the utility does not match any rule.
+  </Step>
+  <Step title="Check the blocklist">
+    The Overview tab marks blocked tokens. If your utility is listed but struck through, it is being excluded by your `blocklist` configuration.
+  </Step>
+</Steps>
+
+## Standalone inspector
+
+If you are not using Vite, you can run the inspector as a standalone package:
+
+```bash
+npm install -D @unocss/inspector
+```
+
+```ts
+import { startInspector } from '@unocss/inspector'
+
+await startInspector({
+  port: 9876,
+  config: './uno.config.ts',
+})
+```
+
+Then visit `http://localhost:9876` in your browser.
+
+<Tip>
+  Enable `details: true` in your UnoCSS config when using the inspector programmatically. This attaches rule, shortcut, and variant metadata to each utility, giving the inspector richer information to display.
+
+  ```ts
+  export default defineConfig({
+    details: true,
+  })
+  ```
+</Tip>

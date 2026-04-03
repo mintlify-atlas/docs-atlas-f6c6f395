@@ -1,0 +1,140 @@
+---
+title: "Introduction"
+description: "What is UnoCSS and how does it work?"
+---
+
+UnoCSS is the instant on-demand atomic CSS engine. Unlike traditional CSS frameworks, it has no core utilities built in — everything is provided through presets, making it fully customizable and composable.
+
+## How it works
+
+UnoCSS scans your source files for class names, attributes, and other patterns, then generates only the CSS rules that are actually used. There is no parsing or AST involved — matching is done via regular expressions, which makes it extremely fast.
+
+When you add a class to your HTML, UnoCSS detects it and generates the corresponding CSS on-demand:
+
+```html
+<div class="m-1">Hello</div>
+```
+
+```css
+.m-1 { margin: 1px; }
+```
+
+Nothing is generated until a utility is actually used in your code.
+
+## Defining rules
+
+You configure UnoCSS through a `uno.config.ts` file. Rules can be static or dynamic:
+
+**Static rule:**
+
+```ts
+// uno.config.ts
+import { defineConfig } from 'unocss'
+
+export default defineConfig({
+  rules: [
+    ['m-1', { margin: '1px' }],
+  ],
+})
+```
+
+**Dynamic rule using a regex matcher:**
+
+```ts
+// uno.config.ts
+import { defineConfig } from 'unocss'
+
+export default defineConfig({
+  rules: [
+    [/^m-([\.\d]+)$/, ([_, num]) => ({ margin: `${num}px` })],
+  ],
+})
+```
+
+With a dynamic rule, any value matching the pattern generates CSS on-demand:
+
+```html
+<div class="m-1">Hello</div>
+<div class="m-7.5">World</div>
+```
+
+```css
+.m-1 { margin: 1px; }
+.m-7\.5 { margin: 7.5px; }
+```
+
+## Presets
+
+Once you have a set of rules, you can extract them into a reusable preset and share it across projects:
+
+```ts
+// my-preset.ts
+import type { Preset } from 'unocss'
+
+export const myPreset: Preset = {
+  name: 'my-preset',
+  rules: [
+    [/^m-([.\d]+)$/, ([_, num]) => ({ margin: `${num}px` })],
+    [/^p-([.\d]+)$/, ([_, num]) => ({ padding: `${num}px` })],
+  ],
+  variants: [/* ... */],
+  shortcuts: [/* ... */],
+}
+```
+
+```ts
+// uno.config.ts
+import { defineConfig } from 'unocss'
+import { myPreset } from './my-preset'
+
+export default defineConfig({
+  presets: [
+    myPreset,
+  ],
+})
+```
+
+UnoCSS ships several official presets — including a Tailwind-compatible preset, an icons preset, and more — so you can start quickly without writing rules from scratch.
+
+## Key features
+
+<CardGroup cols={2}>
+  <Card title="Fully customizable" icon="sliders">
+    No built-in utilities. Every rule, shortcut, and variant comes from presets you choose or define yourself.
+  </Card>
+  <Card title="Instant generation" icon="bolt">
+    Regex-based matching with no parsing or AST overhead. CSS is generated in milliseconds, even for large codebases.
+  </Card>
+  <Card title="Tiny runtime" icon="feather">
+    The core is around 6 KB (min+brotli). You only ship the CSS utilities you actually use.
+  </Card>
+  <Card title="Shortcuts" icon="link">
+    Combine multiple utilities into a single reusable alias, similar to Tailwind's `@apply` but defined in config.
+  </Card>
+  <Card title="Attributify mode" icon="tag">
+    Write utilities as HTML attributes (`text="sm blue"`) instead of long class strings.
+  </Card>
+  <Card title="Pure CSS icons" icon="image">
+    Use any icon from Iconify as a pure CSS background image — no icon font or SVG sprite needed.
+  </Card>
+  <Card title="Transformers" icon="arrows-rotate">
+    Transform source code before extraction: variant groups, compile-class, directives (`@apply`, `@screen`), and more.
+  </Card>
+  <Card title="CDN runtime" icon="globe">
+    Drop a `<script>` tag into any HTML page and generate styles in the browser — no build step required.
+  </Card>
+</CardGroup>
+
+<Note>
+  UnoCSS is an engine, not a framework. It does not ship any default utilities. You get exactly what your chosen presets provide.
+</Note>
+
+## Try it
+
+- **Playground** — experiment with rules and presets directly in your browser at [unocss.dev/play](https://unocss.dev/play/)
+- **Interactive docs** — look up utilities from the default presets at [unocss.dev/interactive](https://unocss.dev/interactive/)
+
+## Next steps
+
+- [Why UnoCSS?](/why-unocss) — how UnoCSS compares to Tailwind CSS, Windi CSS, and other atomic CSS tools
+- [Installation](/installation) — set up UnoCSS with Vite, Nuxt, Astro, Webpack, or as a CDN import

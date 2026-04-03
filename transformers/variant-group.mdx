@@ -1,0 +1,115 @@
+---
+title: "Transformer Variant Group"
+description: "Shorthand syntax for grouping UnoCSS utilities with a common variant prefix."
+---
+
+The variant group transformer enables the [Windi CSS variant group syntax](https://windicss.org/features/variant-groups.html) in UnoCSS. Instead of repeating a variant prefix for every utility, you can group related utilities inside parentheses and share a single prefix.
+
+```html
+<!-- without variant groups -->
+<div class="hover:bg-gray-400 hover:font-medium font-light font-mono" />
+
+<!-- with variant groups -->
+<div class="hover:(bg-gray-400 font-medium) font-(light mono)" />
+```
+
+## Installation
+
+<Steps>
+  <Step title="Install the package">
+    <CodeGroup>
+      ```bash pnpm
+      pnpm add -D @unocss/transformer-variant-group
+      ```
+
+      ```bash yarn
+      yarn add -D @unocss/transformer-variant-group
+      ```
+
+      ```bash npm
+      npm install -D @unocss/transformer-variant-group
+      ```
+
+      ```bash bun
+      bun add -D @unocss/transformer-variant-group
+      ```
+    </CodeGroup>
+
+    <Tip>
+      This transformer is included in the `unocss` package. If you already have `unocss` installed, you can import it directly:
+
+      ```ts
+      import { transformerVariantGroup } from 'unocss'
+      ```
+    </Tip>
+  </Step>
+
+  <Step title="Add to your UnoCSS config">
+    ```ts uno.config.ts
+    import transformerVariantGroup from '@unocss/transformer-variant-group'
+    import { defineConfig } from 'unocss'
+
+    export default defineConfig({
+      // ...
+      transformers: [
+        transformerVariantGroup(),
+      ],
+    })
+    ```
+  </Step>
+</Steps>
+
+## Usage
+
+### Basic expansion
+
+Any variant prefix followed by parentheses will be expanded. Each utility inside the parentheses inherits the prefix.
+
+<CodeGroup>
+  ```html Before
+  <div class="hover:(bg-gray-400 font-medium) font-(light mono)" />
+  ```
+
+  ```html After
+  <div class="hover:bg-gray-400 hover:font-medium font-light font-mono" />
+  ```
+</CodeGroup>
+
+### Nested variant groups
+
+Variant groups can be nested to combine multiple prefixes.
+
+<CodeGroup>
+  ```html Before
+  <div class="sm:(hover:bg-blue-500 text-lg) dark:(text-white bg-black)" />
+  ```
+
+  ```html After
+  <div class="sm:hover:bg-blue-500 sm:text-lg dark:text-white dark:bg-black" />
+  ```
+</CodeGroup>
+
+## Options
+
+### Separator configuration
+
+By default, the transformer expands groups using both `:` and `-` as separators. You can restrict this to colon-only by setting the `separators` option.
+
+```ts uno.config.ts
+import transformerVariantGroup from '@unocss/transformer-variant-group'
+import { defineConfig } from 'unocss'
+
+export default defineConfig({
+  transformers: [
+    transformerVariantGroup({
+      // Only expand colon-separated groups (e.g. hover:(...))
+      // Dash-separated groups (e.g. font-(...)) will not be expanded
+      separators: [':'],
+    }),
+  ],
+})
+```
+
+| Option       | Type                | Default        | Description                                      |
+| ------------ | ------------------- | -------------- | ------------------------------------------------ |
+| `separators` | `(':' \| '-')[]`   | `[':', '-']`   | Which separators trigger variant group expansion |

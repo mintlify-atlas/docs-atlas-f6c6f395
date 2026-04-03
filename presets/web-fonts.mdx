@@ -1,0 +1,234 @@
+---
+title: "Preset Web Fonts"
+description: "Automatically load and use web fonts in UnoCSS with font-family utilities."
+---
+
+`@unocss/preset-web-fonts` generates `font-family` utility classes from web font providers like Google Fonts, Bunny Fonts, and FontShare. Provide font names in your config — the preset handles the `@import` and generates the corresponding utilities automatically.
+
+## Installation
+
+<Steps>
+  <Step title="Install the package">
+    <CodeGroup>
+      ```bash pnpm
+      pnpm add -D @unocss/preset-web-fonts
+      ```
+      ```bash yarn
+      yarn add -D @unocss/preset-web-fonts
+      ```
+      ```bash npm
+      npm install -D @unocss/preset-web-fonts
+      ```
+      ```bash bun
+      bun add -D @unocss/preset-web-fonts
+      ```
+    </CodeGroup>
+  </Step>
+  <Step title="Add to your config">
+    ```ts
+    import presetWebFonts from '@unocss/preset-web-fonts'
+    import presetWind3 from '@unocss/preset-wind3'
+    import { defineConfig } from 'unocss'
+
+    export default defineConfig({
+      presets: [
+        presetWind3(),
+        presetWebFonts({ /* options */ }),
+      ],
+    })
+    ```
+  </Step>
+</Steps>
+
+<Tip>
+This preset is also exported from the `unocss` package:
+
+```ts
+import { presetWebFonts } from 'unocss'
+```
+</Tip>
+
+## Supported providers
+
+| Provider | Description |
+|---|---|
+| `google` | [Google Fonts](https://fonts.google.com/) *(default)* |
+| `bunny` | [Bunny Fonts](https://fonts.bunny.net/) — privacy-friendly Google Fonts alternative |
+| `fontshare` | [FontShare](https://www.fontshare.com/) — quality fonts by ITF |
+| `fontsource` | [Fontsource](https://fontsource.org/) — self-hosted open source fonts via npm |
+| `coollabs` | [CoolLabs Fonts](https://fonts.coollabs.io/) — privacy-friendly Google Fonts drop-in |
+| `none` | No provider — treat the font as a system font |
+
+## Configuration example
+
+```ts
+presetWebFonts({
+  provider: 'google', // default provider
+  fonts: {
+    // extend the default theme's sans and mono stacks
+    sans: 'Roboto',
+    mono: ['Fira Code', 'Fira Mono:400,700'],
+    // custom font keys
+    lobster: 'Lobster',
+    lato: [
+      {
+        name: 'Lato',
+        weights: ['400', '700'],
+        italic: true,
+      },
+      {
+        name: 'sans-serif',
+        provider: 'none', // fallback system font
+      },
+    ],
+  },
+})
+```
+
+## Generated CSS
+
+The preset automatically injects a CSS `@import` and generates a `font-{key}` utility class for each font:
+
+```css
+@import url('https://fonts.googleapis.com/css2?family=Roboto&family=Fira+Code&family=Fira+Mono:wght@400;700&family=Lobster&family=Lato:ital,wght@0,400;0,700;1,400;1,700&display=swap');
+
+/* layer: default */
+.font-lato {
+  font-family: "Lato", sans-serif;
+}
+.font-lobster {
+  font-family: "Lobster";
+}
+.font-mono {
+  font-family: "Fira Code", "Fira Mono", ui-monospace, SFMono-Regular, Menlo,
+    Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+}
+.font-sans {
+  font-family: "Roboto", ui-sans-serif, system-ui, -apple-system,
+    BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans",
+    sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol",
+    "Noto Color Emoji";
+}
+```
+
+Use the generated utilities in your HTML:
+
+```html
+<p class="font-sans">This uses Roboto.</p>
+<code class="font-mono">This uses Fira Code.</code>
+<h1 class="font-lobster">This uses Lobster.</h1>
+```
+
+## Serving fonts locally
+
+By default, fonts are loaded from the provider's CDN. To download fonts and serve them from your own server, use `createLocalFontProcessor`:
+
+```ts
+import presetWebFonts from '@unocss/preset-web-fonts'
+import { createLocalFontProcessor } from '@unocss/preset-web-fonts/local'
+import { defineConfig } from 'unocss'
+
+export default defineConfig({
+  presets: [
+    presetWebFonts({
+      provider: 'none',
+      fonts: {
+        sans: 'Roboto',
+        mono: 'Fira Code',
+      },
+      processors: createLocalFontProcessor({
+        // Directory to cache downloaded fonts
+        cacheDir: 'node_modules/.cache/unocss/fonts',
+
+        // Directory to output font assets
+        fontAssetsDir: 'public/assets/fonts',
+
+        // Base URL for serving fonts from the client
+        fontServeBaseUrl: '/assets/fonts',
+      }),
+    }),
+  ],
+})
+```
+
+<Note>
+Local font processing is a Node.js-only feature and will not work in browser environments. Ensure the font licenses permit redistribution before hosting fonts yourself.
+</Note>
+
+## Custom fetch function
+
+Use a custom HTTP client (e.g. to route through a proxy) by providing a `customFetch` function:
+
+```ts
+import presetWebFonts from '@unocss/preset-web-fonts'
+import presetWind3 from '@unocss/preset-wind3'
+import axios from 'axios'
+import ProxyAgent from 'proxy-agent'
+import { defineConfig } from 'unocss'
+
+export default defineConfig({
+  presets: [
+    presetWind3(),
+    presetWebFonts({
+      customFetch: (url: string) =>
+        axios.get(url, { httpsAgent: new ProxyAgent('https://localhost:7890') }).then(it => it.data),
+      provider: 'google',
+      fonts: {
+        sans: 'Roboto',
+        mono: ['Fira Code', 'Fira Mono:400,700'],
+      },
+    }),
+  ],
+})
+```
+
+## Options
+
+### `provider`
+
+- **Type:** `'google' | 'bunny' | 'fontshare' | 'fontsource' | 'coollabs' | 'none'`
+- **Default:** `'google'`
+
+The default font provider. Individual fonts can override this with their own `provider` field.
+
+### `fonts`
+
+- **Type:** `Record<string, WebFontMeta | string | (WebFontMeta | string)[]>`
+
+Font definitions. Each key becomes a `font-{key}` utility class.
+
+```ts
+interface WebFontMeta {
+  name: string
+  weights?: (string | number)[]
+  italic?: boolean
+  provider?: WebFontsProviders // override the root provider for this font
+}
+```
+
+### `extendTheme`
+
+- **Type:** `boolean`
+- **Default:** `true`
+
+Extend the UnoCSS theme with the configured fonts, so they participate in theme-based utilities.
+
+### `themeKey`
+
+- **Type:** `string`
+- **Default:** `'fontFamily'`
+
+The theme key under which fonts are registered.
+
+### `inlineImports`
+
+- **Type:** `boolean`
+- **Default:** `true`
+
+Inline the CSS `@import` statement directly in the generated output.
+
+### `customFetch`
+
+- **Type:** `(url: string) => Promise<string>`
+
+Custom fetch function for retrieving font CSS from providers.

@@ -1,0 +1,337 @@
+---
+title: "Rules"
+description: "Define custom atomic CSS utility rules in UnoCSS."
+---
+
+Rules define the relationship between a class name and the CSS it produces. UnoCSS matches candidate class names from your source code against every rule in order, then emits only the CSS that is actually needed.
+
+## Static rules
+
+The simplest rule is a two-element tuple: a string matcher and a CSS object.
+
+```ts
+// uno.config.ts
+import { defineConfig } from 'unocss'
+
+export default defineConfig({
+  rules: [
+    ['m-1', { margin: '0.25rem' }],
+  ],
+})
+```
+
+Whenever `m-1` appears in your source, UnoCSS emits:
+
+```css
+.m-1 {
+  margin: 0.25rem;
+}
+```
+
+<Note>
+  CSS property names follow standard CSS syntax — use `font-weight`, not
+  `fontWeight`. Hyphenated property names must be quoted in the object key.
+
+  ```ts
+  rules: [
+    ['font-bold', { 'font-weight': 700 }],
+  ]
+  ```
+</Note>
+
+## Dynamic rules
+
+Replace the string matcher with a `RegExp` and the CSS object with a function to match an unlimited range of class names.
+
+```ts
+rules: [
+  [/^m-(\d+)$/, ([, d]) => ({ margin: `${d / 4}rem` })],
+  // The second argument exposes context: theme, symbols, rawSelector, etc.
+  [/^p-(\d+)$/, (match, ctx) => ({ padding: `${match[1] / 4}rem` })],
+]
+```
+
+Given the following HTML:
+
+```html
+<div class="m-100">
+  <button class="m-3">
+    <icon class="p-5" />
+  </button>
+</div>
+```
+
+UnoCSS generates only the utilities that are used:
+
+```css
+.m-100 { margin: 25rem; }
+.m-3   { margin: 0.75rem; }
+.p-5   { padding: 1.25rem; }
+```
+
+<Tip>
+  Prefer static rules when the output is fixed. UnoCSS can look them up in a
+  hash map instead of running every RegExp, which improves performance.
+</Tip>
+
+## Rule context
+
+The second argument of the dynamic rule function is a `RuleContext` object with the following shape:
+
+```ts
+interface RuleContext<Theme> {
+  rawSelector: string        // unescaped selector from user input
+  currentSelector: string    // selector after variant processing
+  theme: Theme               // resolved theme object
+  symbols: ControlSymbols    // special symbol keys (see below)
+  variantHandlers: VariantHandler[]
+  constructCSS: (body: CSSEntries | CSSObject, overrideSelector?: string) => string
+  generator: UnoGenerator<Theme>
+}
+```
+
+## CSS fallback values
+
+Return a 2-D array to emit duplicate properties — useful for progressive enhancement with new CSS features.
+
+```ts
+rules: [
+  [/^h-(\d+)dvh$/, ([_, d]) => {
+    return [
+      ['height', `${d}vh`],    // fallback for old browsers
+      ['height', `${d}dvh`],   // modern value
+    ]
+  }],
+]
+```
+
+```css
+.h-100dvh {
+  height: 100vh;
+  height: 100dvh;
+}
+```
+
+## Special symbols
+
+UnoCSS exposes special symbol keys via `symbols` (importable from `@unocss/core`, or available on `ctx.symbols`) to attach metadata to generated CSS objects.
+
+| Symbol | Type | Description |
+|---|---|---|
+| `symbols.parent` | `string` | Wraps the rule in a parent at-rule (`@media`, `@supports`, etc.) |
+| `symbols.selector` | `(s: string) => string` | Modifies the generated CSS selector |
+| `symbols.layer` | `string` | Assigns the rule to a specific UnoCSS layer |
+| `symbols.sort` | `number` | Overrides sort order within a layer |
+| `symbols.body` | `string` | Replaces the entire CSS body with a raw string (supports nesting) |
+| `symbols.variants` | `VariantHandler[]` | Additional variant handlers for the rule |
+| `symbols.noMerge` | `true` | Prevents this rule from being merged with identical bodies |
+| `symbols.shortcutsNoMerge` | `true` | Prevents merging when used inside shortcuts |
+
+### Wrapping with a parent at-rule
+
+<CodeGroup>
+
+```ts Static rule
+import { symbols } from '@unocss/core'
+
+rules: [
+  ['grid', {
+    [symbols.parent]: '@supports (display: grid)',
+    display: 'grid',
+  }],
+]
+```
+
+```ts Dynamic rule
+rules: [
+  [/^grid$/, ([, d], { symbols }) => ({
+    [symbols.parent]: '@supports (display: grid)',
+    display: 'grid',
+  })],
+]
+```
+
+</CodeGroup>
+
+```css
+@supports (display: grid) {
+  .grid {
+    display: grid;
+  }
+}
+```
+
+## Multi-selector rules
+
+Return an array (static rules) or use a JavaScript generator function (dynamic rules) to emit multiple CSS rules from one matcher.
+
+<CodeGroup>
+
+```ts Static rule
+import { symbols } from '@unocss/core'
+
+rules: [
+  ['button-red', [
+    { background: 'red' },
+    {
+      [symbols.selector]: selector => `${selector}:hover`,
+      background: `color-mix(in srgb, red 90%, black)`,
+    },
+  ]],
+]
+```
+
+```ts Dynamic rule
+rules: [
+  [/^button-(.*)$/, function* ([, color], { symbols }) {
+    yield { background: color }
+    yield {
+      [symbols.selector]: selector => `${selector}:hover`,
+      background: `color-mix(in srgb, ${color} 90%, black)`,
+    }
+  }],
+]
+```
+
+</CodeGroup>
+
+```css
+.button-red {
+  background: red;
+}
+.button-red:hover {
+  background: color-mix(in srgb, red 90%, black);
+}
+```
+
+## Fully controlled rules
+
+<Warning>
+  This is an advanced escape hatch. Rules that return raw strings bypass variant
+  processing — `hover:custom-xxx` will not apply the `hover` variant.
+  Use `symbols.body` instead when you still need variant support.
+</Warning>
+
+Return a raw CSS string from a dynamic rule to take full control of the output. You are responsible for selector escaping and CSS structure.
+
+```ts
+import { defineConfig, toEscapedSelector as e } from 'unocss'
+
+export default defineConfig({
+  rules: [
+    [/^custom-(.+)$/, ([, name], { rawSelector, variantHandlers, theme }) => {
+      if (variantHandlers.length)
+        return // disable this rule when variants are present
+
+      const selector = e(rawSelector)
+      return `
+${selector} {
+  font-size: ${theme.fontSize.sm};
+}
+${selector}::after {
+  content: 'after';
+}
+@media (min-width: ${theme.breakpoints.sm}) {
+  ${selector} { font-size: ${theme.fontSize.sm}; }
+}
+`
+    }],
+  ],
+})
+```
+
+### Fully controlled with variant support
+
+Use `symbols.body` to write a raw CSS body while keeping variant support intact.
+
+<CodeGroup>
+
+```ts Static rule
+import { symbols } from '@unocss/core'
+
+rules: [
+  ['custom-red', {
+    [symbols.body]: `
+      font-size: 1rem;
+      &::after { content: 'after'; }
+      & > .bar { color: red; }
+    `,
+    [symbols.selector]: selector => `:is(${selector})`,
+  }],
+]
+```
+
+```ts Dynamic rule
+rules: [
+  [/^custom-(.+)$/, ([_, c], { symbols }) => ({
+    [symbols.body]: `
+      font-size: 1rem;
+      &::after { content: 'after'; }
+      & > .bar { color: ${c}; }
+    `,
+    [symbols.selector]: selector => `:is(${selector})`,
+  })],
+]
+```
+
+</CodeGroup>
+
+`hover:custom-red` now produces:
+
+```css
+:is(.hover\:custom-red):hover {
+  font-size: 1rem;
+  &::after { content: 'after'; }
+  & > .bar { color: red; }
+}
+```
+
+## Ordering and priority
+
+Rules are matched in the order they are defined. Later rules have higher priority. When using dynamic rules, multiple matching tokens are sorted alphabetically within that rule's group.
+
+## CSS merging
+
+By default, UnoCSS merges rules that produce identical CSS bodies into a single selector list to minimise output size.
+
+```html
+<div class="m-2 hover:m-2">...</div>
+```
+
+```css
+/* merged — one declaration instead of two */
+.hover\:m-2:hover,
+.m-2 {
+  margin: 0.5rem;
+}
+```
+
+Disable merging for a specific rule with `symbols.noMerge: true` or by setting `noMerge: true` in the `RuleMeta` third tuple element.
+
+## The `meta` object
+
+Each rule tuple accepts an optional third element — a `RuleMeta` object — to control layer assignment, merging, autocomplete hints, and more.
+
+```ts
+rules: [
+  [/^m-(\d)$/, ([, d]) => ({ margin: `${d / 4}rem` }), {
+    layer: 'utilities',        // assign to a named layer
+    noMerge: false,            // allow selector merging (default)
+    sort: 0,                   // fine-tune sort order
+    autocomplete: 'm-<num>',   // autocomplete hint
+  }],
+]
+```
+
+```ts
+interface RuleMeta {
+  layer?: string
+  noMerge?: boolean
+  noScope?: boolean
+  sort?: number
+  autocomplete?: Arrayable<AutoCompleteTemplate>
+  prefix?: string | string[]
+  internal?: boolean
+  custom?: Record<string, any>
+}
+```

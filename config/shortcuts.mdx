@@ -1,0 +1,151 @@
+---
+title: "Shortcuts"
+description: "Create reusable utility aliases and dynamic shortcuts in UnoCSS."
+---
+
+Shortcuts let you combine multiple utility classes into a single alias. They are similar to [Windi CSS shortcuts](https://windicss.org/features/shortcuts.html) and are fully recursive — a shortcut can reference other shortcuts.
+
+## Static shortcuts
+
+The simplest form is an object mapping a name to a string of space-separated utilities.
+
+```ts
+// uno.config.ts
+import { defineConfig } from 'unocss'
+
+export default defineConfig({
+  shortcuts: {
+    'btn': 'py-2 px-4 font-semibold rounded-lg shadow-md',
+    'btn-green': 'text-white bg-green-500 hover:bg-green-700',
+    'red': 'text-red-100',   // single utility alias
+  },
+})
+```
+
+You can also write shortcuts as an array of objects, which allows mixing static and dynamic entries in the same list:
+
+```ts
+shortcuts: [
+  {
+    btn: 'py-2 px-4 font-semibold rounded-lg shadow-md',
+  },
+  // dynamic entries follow below
+]
+```
+
+## Dynamic shortcuts
+
+A dynamic shortcut pairs a `RegExp` matcher with a handler function, exactly like a [dynamic rule](/config/rules#dynamic-rules). The handler receives the `RegExpMatchArray` and must return a utility string.
+
+```ts
+shortcuts: [
+  [/^btn-(.*)$/, ([, c]) => `bg-${c}-400 text-${c}-100 py-2 px-4 rounded-lg`],
+]
+```
+
+With this shortcut, both `btn-green` and `btn-red` resolve to fully expanded CSS:
+
+```css
+.btn-green {
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
+  padding-left: 1rem;
+  padding-right: 1rem;
+  background-color: rgb(74 222 128 / var(--un-bg-opacity));
+  border-radius: 0.5rem;
+  color: rgb(220 252 231 / var(--un-text-opacity));
+}
+.btn-red {
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
+  padding-left: 1rem;
+  padding-right: 1rem;
+  background-color: rgb(248 113 113 / var(--un-bg-opacity));
+  border-radius: 0.5rem;
+  color: rgb(254 226 226 / var(--un-text-opacity));
+}
+```
+
+## Using theme values in shortcuts
+
+The dynamic handler's second argument is the same `RuleContext` used by dynamic rules, which gives access to `theme`.
+
+```ts
+shortcuts: [
+  [/^badge-(.*)$/, ([, c], { theme }) => {
+    if (Object.keys(theme.colors).includes(c))
+      return `bg-${c}4:10 text-${c}5 rounded`
+  }],
+]
+```
+
+## Shortcut ordering and priority
+
+Like rules, **later shortcuts have higher priority**. When multiple patterns match the same class name, the last matching shortcut wins.
+
+```ts
+shortcuts: [
+  { btn: 'py-2 px-4' },           // lower priority
+  { btn: 'py-3 px-6 font-bold' }, // overrides the one above
+]
+```
+
+## Recursive shortcuts
+
+Shortcuts can reference other shortcuts. UnoCSS resolves them recursively until it reaches atomic utility rules.
+
+```ts
+shortcuts: {
+  'btn-base': 'py-2 px-4 rounded',
+  'btn': 'btn-base font-semibold shadow-md',
+  'btn-primary': 'btn bg-blue-500 text-white',
+}
+```
+
+`btn-primary` expands to `btn-base font-semibold shadow-md bg-blue-500 text-white`, which then expands further to the underlying atomic utilities.
+
+<Note>
+  Circular shortcut references are not supported and will cause an infinite loop.
+  Keep shortcut chains directed — every shortcut should eventually resolve to
+  atomic utilities.
+</Note>
+
+## The `shortcutsLayer` option
+
+Shortcuts are emitted into a dedicated CSS layer named `shortcuts` by default. You can rename this layer with the top-level `shortcutsLayer` config option.
+
+```ts
+export default defineConfig({
+  shortcutsLayer: 'components', // default: 'shortcuts'
+  shortcuts: {
+    btn: 'py-2 px-4 rounded',
+  },
+})
+```
+
+Control the position of this layer relative to others with the `layers` option:
+
+```ts
+export default defineConfig({
+  layers: {
+    components: -1,  // before default utilities
+    default: 1,
+    utilities: 2,
+  },
+  shortcutsLayer: 'components',
+})
+```
+
+## Type signature
+
+```ts
+type StaticShortcut      = [string, string | ShortcutValue[], RuleMeta?]
+type StaticShortcutMap   = Record<string, string | ShortcutValue[]>
+type DynamicShortcut<T>  = [RegExp, DynamicShortcutMatcher<T>, RuleMeta?]
+
+type UserShortcuts<Theme> =
+  | StaticShortcutMap
+  | (StaticShortcut | DynamicShortcut<Theme> | StaticShortcutMap)[]
+```
+
+The optional third element of a shortcut tuple is the same `RuleMeta` object accepted by rules, allowing you to set `layer`, `sort`, `autocomplete`, and other metadata on a per-shortcut basis.

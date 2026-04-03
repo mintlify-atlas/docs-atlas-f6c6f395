@@ -1,0 +1,228 @@
+---
+title: "Variants"
+description: "Define custom variants for responsive, pseudo-class, and conditional styling in UnoCSS."
+---
+
+Variants let you apply conditional transformations to any utility class. They are the mechanism behind prefixes like `hover:`, `dark:`, `sm:`, and `focus-visible:`. Before a class name is matched against rules, UnoCSS runs it through every variant in order — each variant can strip its own prefix and rewrite the selector, parent at-rule, or CSS body.
+
+## How variants work
+
+Consider `hover:m-2`:
+
+<Steps>
+  <Step title="Extract the token">
+    `hover:m-2` is found in your source code and sent to the variant pipeline.
+  </Step>
+  <Step title="Match a variant">
+    The `hover` variant recognises its prefix, removes it, and returns `m-2`
+    along with a selector transformation (`s => `${s}:hover``).
+  </Step>
+  <Step title="Match a rule">
+    The remaining string `m-2` is matched against rules. The `m-(\d)` dynamic
+    rule generates `{ margin: 0.5rem }`.
+  </Step>
+  <Step title="Apply the transformation">
+    The variant's selector function is applied to `.m-2`, producing
+    `.hover\:m-2:hover`.
+  </Step>
+</Steps>
+
+Result:
+
+```css
+.hover\:m-2:hover {
+  margin: 0.5rem;
+}
+```
+
+## Writing a custom variant
+
+A variant is either a plain function or a `VariantObject`.
+
+### Function form
+
+The simplest variant is a function that receives the current matcher string and returns a new string or a `VariantHandler`.
+
+```ts
+// uno.config.ts
+import { defineConfig } from 'unocss'
+
+export default defineConfig({
+  variants: [
+    // hover: variant
+    (matcher) => {
+      if (!matcher.startsWith('hover:'))
+        return matcher  // pass through unchanged
+
+      return {
+        matcher: matcher.slice(6),          // strip the prefix
+        selector: s => `${s}:hover`,        // append :hover to the selector
+      }
+    },
+  ],
+  rules: [
+    [/^m-(\d)$/, ([, d]) => ({ margin: `${d / 4}rem` })],
+  ],
+})
+```
+
+### Object form
+
+Use `VariantObject` when you need a name, ordering control, multi-pass support, or autocomplete hints.
+
+```ts
+variants: [
+  {
+    name: 'hover',
+    match(matcher) {
+      if (!matcher.startsWith('hover:'))
+        return matcher
+
+      return {
+        matcher: matcher.slice(6),
+        selector: s => `${s}:hover`,
+      }
+    },
+    // allow this variant to stack with itself (e.g. hover:hover:m-2)
+    multiPass: false,
+    // sort order — lower runs first
+    order: 0,
+  },
+]
+```
+
+## Variant return values
+
+The `match` function can return:
+
+| Return value | Meaning |
+|---|---|
+| The original `matcher` string | Variant does not apply; pass through unchanged |
+| A new string | Variant strips its prefix; the new string is the remaining matcher |
+| A `VariantHandler` object | Full control over selector, parent, layer, etc. |
+| `undefined` | Variant does not apply |
+
+## The `VariantHandler` object
+
+```ts
+interface VariantHandler {
+  matcher?: string           // the rewritten matcher for the next round
+  selector?: (input: string, body: CSSEntries) => string | undefined
+  body?: (body: CSSEntries) => CSSEntries | undefined
+  parent?: string | [string, number]  // parent at-rule, e.g. '@media (prefers-color-scheme: dark)'
+  layer?: string             // override the CSS layer
+  sort?: number              // sort order within a layer
+  order?: number             // order in which this variant is applied to the selector
+  noMerge?: boolean
+}
+```
+
+### Responsive breakpoint variant
+
+A variant that wraps the rule in a `@media` query:
+
+```ts
+variants: [
+  (matcher, { theme }) => {
+    const match = matcher.match(/^(\w+):/)
+    if (!match)
+      return matcher
+
+    const bp = theme.breakpoints?.[match[1]]
+    if (!bp)
+      return matcher
+
+    return {
+      matcher: matcher.slice(match[0].length),
+      parent: `@media (min-width: ${bp})`,
+    }
+  },
+]
+```
+
+### Dark mode variant
+
+```ts
+variants: [
+  (matcher) => {
+    if (!matcher.startsWith('dark:'))
+      return matcher
+
+    return {
+      matcher: matcher.slice(5),
+      selector: s => `.dark ${s}`,
+    }
+  },
+]
+```
+
+## Using theme in variants
+
+The variant function receives a `VariantContext` as its second argument, which exposes `theme` and the generator instance.
+
+```ts
+variants: [
+  {
+    name: 'screen',
+    match(matcher, { theme }) {
+      const match = matcher.match(/^screen-(\w+):/)
+      if (!match)
+        return matcher
+
+      const size = theme.breakpoints?.[match[1]]
+      if (!size)
+        return matcher
+
+      return {
+        matcher: matcher.slice(match[0].length),
+        parent: `@media (min-width: ${size})`,
+      }
+    },
+  },
+]
+```
+
+## Compound variants
+
+Because each token passes through the full variant pipeline on every round, you can stack multiple variants:
+
+```html
+<div class="dark:hover:text-white"></div>
+```
+
+1. `dark:` variant matches first, strips its prefix, wraps selector in `.dark ...`
+2. `hover:` variant matches next, strips its prefix, appends `:hover`
+3. `text-white` is matched by a rule
+
+Result:
+
+```css
+.dark .dark\:hover\:text-white:hover {
+  color: #fff;
+}
+```
+
+## Type signatures
+
+```ts
+type VariantFunction<Theme> = (
+  matcher: string,
+  context: Readonly<VariantContext<Theme>>
+) => Awaitable<string | VariantHandler | VariantHandler[] | undefined>
+
+interface VariantObject<Theme> {
+  name?: string
+  match: VariantFunction<Theme>
+  order?: number
+  multiPass?: boolean
+  autocomplete?: Arrayable<AutoCompleteFunction | AutoCompleteTemplate>
+}
+
+type Variant<Theme> = VariantFunction<Theme> | VariantObject<Theme>
+```
+
+<Tip>
+  For real-world variant implementations — including attribute selectors,
+  `aria-*` variants, container queries, and more — browse the
+  [preset-mini variants source](https://github.com/unocss/unocss/tree/main/packages-presets/preset-mini/src/_variants).
+</Tip>

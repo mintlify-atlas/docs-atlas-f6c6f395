@@ -1,0 +1,134 @@
+---
+title: "Astro"
+description: "Add UnoCSS to your Astro project for on-demand atomic CSS."
+---
+
+The UnoCSS integration for [Astro](https://astro.build/): `@unocss/astro`.
+
+## Installation
+
+<Steps>
+  <Step title="Install the packages">
+    <CodeGroup>
+
+    ```bash npm
+    npm install -D unocss @unocss/astro
+    ```
+
+    ```bash yarn
+    yarn add -D unocss @unocss/astro
+    ```
+
+    ```bash pnpm
+    pnpm add -D unocss @unocss/astro
+    ```
+
+    ```bash bun
+    bun add -D unocss @unocss/astro
+    ```
+
+    </CodeGroup>
+  </Step>
+  <Step title="Add the integration to astro.config.ts">
+    ```ts astro.config.ts
+    import { defineConfig } from 'astro/config'
+    import UnoCSS from 'unocss/astro'
+
+    export default defineConfig({
+      integrations: [
+        UnoCSS(),
+      ],
+    })
+    ```
+  </Step>
+  <Step title="Create a UnoCSS config file">
+    ```ts uno.config.ts
+    import { defineConfig } from 'unocss'
+
+    export default defineConfig({
+      // ...UnoCSS options
+    })
+    ```
+  </Step>
+</Steps>
+
+## Style reset
+
+Browser style resets are not injected by default. To enable one, install `@unocss/reset`:
+
+<CodeGroup>
+
+```bash npm
+npm install -D @unocss/reset
+```
+
+```bash yarn
+yarn add -D @unocss/reset
+```
+
+```bash pnpm
+pnpm add -D @unocss/reset
+```
+
+```bash bun
+bun add -D @unocss/reset
+```
+
+</CodeGroup>
+
+Then enable it in your config:
+
+```ts astro.config.ts
+import { defineConfig } from 'astro/config'
+import UnoCSS from 'unocss/astro'
+
+export default defineConfig({
+  integrations: [
+    UnoCSS({
+      injectReset: true // or a path to the reset file
+    }),
+  ],
+})
+```
+
+## Usage without presets
+
+This integration does not include any default presets. To use it standalone (for example when building a meta-framework), install the package directly and configure your own presets:
+
+<CodeGroup>
+
+```bash npm
+npm install -D @unocss/astro
+```
+
+```bash yarn
+yarn add -D @unocss/astro
+```
+
+```bash pnpm
+pnpm add -D @unocss/astro
+```
+
+```bash bun
+bun add -D @unocss/astro
+```
+
+</CodeGroup>
+
+```ts astro.config.mjs
+import UnoCSS from '@unocss/astro'
+
+export default {
+  integrations: [
+    UnoCSS(),
+  ],
+}
+```
+
+The integration is built on top of the [Vite plugin](/integrations/vite). All Vite plugin options apply.
+
+## Notes
+
+<Note>
+  [`client:only`](https://docs.astro.build/en/reference/directives-reference/#clientonly) components must be placed in the [`components`](https://docs.astro.build/en/core-concepts/project-structure/#srccomponents) folder or added to UnoCSS's `content` config in order to be processed by the extractor.
+</Note>

@@ -1,0 +1,384 @@
+---
+title: "Core API"
+description: "Programmatic API for creating and using UnoCSS generators."
+---
+
+The `@unocss/core` package exposes the engine of UnoCSS without any presets. Use it to build your own atomic CSS framework or integrate UnoCSS programmatically.
+
+## Installation
+
+<CodeGroup>
+```bash npm
+npm install -D @unocss/core
+```
+
+```bash pnpm
+pnpm add -D @unocss/core
+```
+
+```bash yarn
+yarn add -D @unocss/core
+```
+
+```bash bun
+bun add -D @unocss/core
+```
+</CodeGroup>
+
+## Quick start
+
+```ts
+import { createGenerator, defineConfig } from '@unocss/core'
+
+const config = defineConfig({
+  rules: [
+    ['flex', { display: 'flex' }],
+    [/^m-(\d+)$/, ([, d]) => ({ margin: `${Number(d) / 4}rem` })],
+  ],
+})
+
+const generator = await createGenerator(config)
+const { css } = await generator.generate('flex m-4')
+```
+
+## `createGenerator()`
+
+Creates a `UnoGenerator` instance asynchronously. This is the preferred way to instantiate the generator.
+
+```ts
+async function createGenerator<Theme extends object = object>(
+  config?: UserConfig<Theme>,
+  defaults?: UserConfigDefaults<Theme>,
+): Promise<UnoGenerator<Theme>>
+```
+
+<ParamField path="config" type="UserConfig<Theme>">
+  User configuration object. See [Config Options](/reference/config-options) for all available options.
+</ParamField>
+
+<ParamField path="defaults" type="UserConfigDefaults<Theme>">
+  Default configuration merged before user config. Useful when building tools on top of UnoCSS to set sensible defaults that users can override.
+</ParamField>
+
+```ts
+import { createGenerator } from '@unocss/core'
+import { presetMini } from '@unocss/preset-mini'
+
+const generator = await createGenerator({
+  presets: [presetMini()],
+  rules: [
+    ['custom-rule', { color: 'red' }],
+  ],
+})
+```
+
+## `defineConfig()`
+
+A typed helper that returns its argument unchanged. It exists solely to provide TypeScript inference on configuration objects.
+
+```ts
+function defineConfig<Theme extends object = object>(
+  config: UserConfig<Theme>,
+): UserConfig<Theme>
+```
+
+```ts
+import { defineConfig } from '@unocss/core'
+
+export default defineConfig({
+  rules: [
+    ['flex', { display: 'flex' }],
+  ],
+})
+```
+
+## `UnoGenerator` class
+
+The core class responsible for CSS generation. Create instances with `createGenerator()` rather than the constructor.
+
+<Note>
+  Calling `new UnoGenerator()` directly is deprecated. Always use `createGenerator()`.
+</Note>
+
+### Properties
+
+<ResponseField name="version" type="string">
+  The current version of `@unocss/core`.
+</ResponseField>
+
+<ResponseField name="config" type="ResolvedConfig<Theme>">
+  The fully resolved configuration, including all preset contributions merged together.
+</ResponseField>
+
+<ResponseField name="cache" type="Map<string, StringifiedUtil<Theme>[] | null>">
+  Per-token parse cache. A `null` value means the token was evaluated and produced no match.
+</ResponseField>
+
+<ResponseField name="blocked" type="Set<string>">
+  Tokens that are blocked by the `blocklist` config option.
+</ResponseField>
+
+### `generate()`
+
+Generates CSS for a set of tokens or raw source code.
+
+```ts
+generate(
+  input: string | Set<string> | CountableSet<string> | string[],
+  options?: GenerateOptions<false>,
+): Promise<GenerateResult<Set<string>>>
+
+generate(
+  input: string | Set<string> | CountableSet<string> | string[],
+  options?: GenerateOptions<true>,
+): Promise<GenerateResult<Map<string, ExtendedTokenInfo<Theme>>>>
+```
+
+<ParamField path="input" type="string | Set<string> | string[]" required>
+  Source code string (will be passed through extractors), a `Set` of already-extracted tokens, or an array of tokens.
+</ParamField>
+
+<ParamField path="options.id" type="string">
+  File path of the module being processed. Used by extractors that are file-type aware.
+</ParamField>
+
+<ParamField path="options.preflights" type="boolean" default="true">
+  Whether to include preflight CSS in the output.
+</ParamField>
+
+<ParamField path="options.safelist" type="boolean" default="true">
+  Whether to include safelist utilities in the output.
+</ParamField>
+
+<ParamField path="options.minify" type="boolean" default="false">
+  Produce minified CSS without layer comments or newlines.
+</ParamField>
+
+<ParamField path="options.scope" type="string">
+  Scope selector to prepend to all generated selectors (experimental).
+</ParamField>
+
+<ParamField path="options.extendedInfo" type="boolean" default="false">
+  When `true`, the `matched` field of the result is a `Map` with per-token payload and usage counts instead of a plain `Set`.
+</ParamField>
+
+**Returns** a `GenerateResult`:
+
+<ResponseField name="css" type="string">
+  The complete generated CSS string, with all layers concatenated in order.
+</ResponseField>
+
+<ResponseField name="layers" type="string[]">
+  Ordered list of layer names present in the output.
+</ResponseField>
+
+<ResponseField name="matched" type="Set<string> | Map<string, ExtendedTokenInfo>">
+  Tokens that produced at least one CSS rule. A `Set<string>` by default, or `Map` when `extendedInfo` is `true`.
+</ResponseField>
+
+<ResponseField name="getLayer(name?)" type="(name?: string) => string | undefined">
+  Returns the CSS string for a single named layer.
+</ResponseField>
+
+<ResponseField name="getLayers(includes?, excludes?)" type="(includes?: string[], excludes?: string[]) => string">
+  Returns concatenated CSS for a subset of layers.
+</ResponseField>
+
+<ResponseField name="setLayer(layer, callback)" type="(layer: string, callback: (content: string) => Promise<string>) => Promise<string>">
+  Replaces the content of a layer using an async transform callback.
+</ResponseField>
+
+```ts
+const { css, layers, getLayer, matched } = await generator.generate(
+  '<div class="flex m-4 hover:text-red-500">',
+  { id: 'index.html' },
+)
+
+// Access a specific layer
+const defaultLayer = getLayer('default')
+```
+
+### `parseToken()`
+
+Parses a single token string and returns its stringified CSS utilities, or `null`/`undefined` if it does not match any rule.
+
+Results are cached — repeated calls for the same token are free.
+
+```ts
+async parseToken(
+  raw: string,
+  alias?: string,
+): Promise<StringifiedUtil<Theme>[] | undefined | null>
+```
+
+<ParamField path="raw" type="string" required>
+  The raw class token to parse (e.g. `"hover:text-red-500"`).
+</ParamField>
+
+<ParamField path="alias" type="string">
+  Alternative string to use as the token selector when generating CSS.
+</ParamField>
+
+```ts
+const utils = await generator.parseToken('flex')
+// Returns an array of StringifiedUtil tuples, or null if unmatched
+```
+
+### `applyExtractors()`
+
+Runs all configured extractors against a source string and returns the set of discovered tokens.
+
+```ts
+async applyExtractors(
+  code: string,
+  id?: string,
+  extracted?: Set<string> | CountableSet<string>,
+): Promise<Set<string> | CountableSet<string>>
+```
+
+<ParamField path="code" type="string" required>
+  Source code to scan.
+</ParamField>
+
+<ParamField path="id" type="string">
+  File path, used by file-type-aware extractors.
+</ParamField>
+
+<ParamField path="extracted" type="Set<string> | CountableSet<string>">
+  Existing set to merge results into. A new `Set` is created when omitted.
+</ParamField>
+
+```ts
+const tokens = await generator.applyExtractors(
+  '<div class="flex p-4">',
+  'template.html',
+)
+// Set { 'flex', 'p-4' }
+```
+
+### `matchVariants()`
+
+Iterates through all configured variants and rewrites a raw token into one or more `VariantMatchedResult` tuples.
+
+```ts
+async matchVariants(
+  raw: string,
+  current?: string,
+): Promise<readonly VariantMatchedResult<Theme>[]>
+```
+
+<ParamField path="raw" type="string" required>
+  The original token string before any variant stripping.
+</ParamField>
+
+<ParamField path="current" type="string">
+  The token with any previously applied variants already stripped. Defaults to `raw`.
+</ParamField>
+
+Each `VariantMatchedResult` is a tuple of `[raw, current, variantHandlers, variants]`.
+
+### `stringifyShortcuts()`
+
+Expands a shortcut into its constituent utilities and stringifies them into `StringifiedUtil` tuples ready for CSS output.
+
+```ts
+async stringifyShortcuts(
+  parent: VariantMatchedResult<Theme>,
+  context: RuleContext<Theme>,
+  expanded: (string | ShortcutInlineValue)[],
+  meta?: RuleMeta,
+): Promise<StringifiedUtil<Theme>[] | undefined>
+```
+
+### `setConfig()`
+
+Replaces the generator's configuration at runtime, clearing all internal caches.
+
+```ts
+async setConfig(
+  userConfig?: UserConfig<Theme>,
+  defaults?: UserConfigDefaults<Theme>,
+): Promise<void>
+```
+
+## Generator pipeline
+
+When `generator.generate(source)` is called, the input goes through three stages:
+
+<Steps>
+  <Step title="Extract">
+    Each extractor in `config.extractors` is called with the source code. Their outputs are merged into a flat set of candidate tokens. The default extractor splits on whitespace and common quote characters.
+  </Step>
+  <Step title="Match">
+    For each token, `parseToken()` runs preprocessors, then `matchVariants()` to strip and record variant prefixes (e.g. `hover:`, `dark:`), then attempts to match the remaining string against static rules (via hash map lookup) and dynamic rules (via regex iteration).
+  </Step>
+  <Step title="Generate">
+    Matched utilities are stringified into CSS entries, sorted by rule index and variant sort values, grouped into layers, and written to the output string.
+  </Step>
+</Steps>
+
+## Key types
+
+### `UserConfig<Theme>`
+
+The top-level configuration interface accepted by `createGenerator()` and `defineConfig()`. It extends `ConfigBase`, `GeneratorOptions`, `PluginOptions`, and `UserOnlyOptions`.
+
+See [Config Options](/reference/config-options) for a complete reference.
+
+### `ResolvedConfig<Theme>`
+
+The fully merged and normalized configuration produced by `resolveConfig()`. All arrays from presets and user config are concatenated, shortcuts are normalized, and defaults are applied.
+
+```ts
+interface ResolvedConfig<Theme extends object = object> {
+  rules: readonly Rule<Theme>[]
+  shortcuts: Shortcut<Theme>[]
+  variants: VariantObject<Theme>[]
+  extractors: Extractor[]
+  preflights: Preflight<Theme>[]
+  layers: Record<string, number>
+  theme: Theme
+  // ...and more
+}
+```
+
+### `GenerateResult<T>`
+
+```ts
+interface GenerateResult<T = Set<string>> {
+  css: string
+  layers: string[]
+  matched: T
+  getLayer: (name?: string) => string | undefined
+  getLayers: (includes?: string[], excludes?: string[]) => string
+  setLayer: (layer: string, callback: (content: string) => Promise<string>) => Promise<string>
+}
+```
+
+### `ParsedUtil`
+
+A readonly tuple representing a matched and parsed utility before CSS stringification:
+
+```ts
+type ParsedUtil = readonly [
+  index: number,          // rule index for ordering
+  raw: string,            // original token string
+  entries: CSSEntries,    // CSS property/value pairs
+  meta: RuleMeta | undefined,
+  variantHandlers: VariantHandler[],
+]
+```
+
+### `Extractor`
+
+```ts
+interface Extractor {
+  name: string
+  order?: number
+  extract?: (ctx: ExtractorContext) => Awaitable<
+    Set<string> | CountableSet<string> | string[] | undefined | void
+  >
+}
+```
+
+See [Extractors](/reference/extractors) for more detail on writing and using extractors.

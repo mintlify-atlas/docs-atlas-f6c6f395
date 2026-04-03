@@ -1,0 +1,146 @@
+---
+title: "CDN Runtime"
+description: "Use UnoCSS directly in the browser via CDN — no build step required."
+---
+
+The UnoCSS CDN runtime runs entirely in the browser. It detects DOM changes and generates the corresponding CSS on the fly — no build step or bundler needed.
+
+## Usage
+
+Add the following script tag to your `index.html`:
+
+```html index.html
+<script src="https://cdn.jsdelivr.net/npm/@unocss/runtime"></script>
+```
+
+By default, the [Wind3 preset](/presets/wind) is applied.
+
+<Note>
+  The runtime does not include preflights. To add style resets, link one from the reset package:
+
+  ```html
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@unocss/reset/normalize.min.css" />
+  <!-- or -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@unocss/reset/tailwind.min.css" />
+  ```
+</Note>
+
+## Configuration
+
+Configure UnoCSS by defining `window.__unocss` before the runtime script loads:
+
+```html index.html
+<!-- define unocss options... -->
+<script>
+  window.__unocss = {
+    rules: [
+      // custom rules...
+    ],
+    presets: [
+      // custom presets...
+    ],
+    // ...
+  }
+</script>
+<!-- ...then load the runtime -->
+<script src="https://cdn.jsdelivr.net/npm/@unocss/runtime"></script>
+```
+
+## Available builds
+
+Several CDN builds are available for different use cases.
+
+### Uno (default)
+
+Includes `@unocss/preset-wind3`:
+
+```html
+<script src="https://cdn.jsdelivr.net/npm/@unocss/runtime/uno.global.js"></script>
+```
+
+### Attributify
+
+Includes `@unocss/preset-wind3` and `@unocss/preset-attributify`:
+
+```html
+<script src="https://cdn.jsdelivr.net/npm/@unocss/runtime/attributify.global.js"></script>
+```
+
+### Mini
+
+Includes `@unocss/preset-mini` and `@unocss/preset-attributify`:
+
+```html
+<script src="https://cdn.jsdelivr.net/npm/@unocss/runtime/mini.global.js"></script>
+```
+
+### Core (custom presets)
+
+Load the core runtime and add presets manually. All [official presets](/presets/overview) are available. Load preset scripts before initializing the core:
+
+```html
+<script src="https://cdn.jsdelivr.net/npm/@unocss/runtime/preset-icons.global.js"></script>
+<script>
+  window.__unocss = {
+    presets: [
+      () =>
+        window.__unocss_runtime.presets.presetIcons({
+          scale: 1.2,
+          cdn: 'https://esm.sh/',
+        }),
+    ],
+  }
+</script>
+<script src="https://cdn.jsdelivr.net/npm/@unocss/runtime/core.global.js"></script>
+```
+
+## Bundler usage
+
+You can also use the runtime in a bundled project:
+
+```bash
+npm i @unocss/runtime
+```
+
+```ts
+import initUnocssRuntime from '@unocss/runtime'
+
+initUnocssRuntime({ /* options */ })
+```
+
+Pass a UnoCSS config using the `defaults` property:
+
+```ts
+import initUnocssRuntime from '@unocss/runtime'
+import config from './uno.config'
+
+initUnocssRuntime({ defaults: config })
+```
+
+Presets can be imported from `esm.sh`:
+
+```ts
+import { defineConfig } from '@unocss/runtime'
+import presetIcons from 'https://esm.sh/@unocss/preset-icons/browser'
+import presetWind3 from 'https://esm.sh/@unocss/preset-wind3'
+
+export default defineConfig({
+  presets: [presetWind3(), presetIcons({ cdn: 'https://esm.sh/' })],
+})
+```
+
+## Preventing FOUC
+
+Because UnoCSS applies styles after the DOM is ready, users may briefly see unstyled content (Flash of Unstyled Content). Use the `un-cloak` attribute combined with a CSS rule to hide elements until their styles are applied:
+
+```css
+[un-cloak] {
+  display: none;
+}
+```
+
+```html
+<div class="text-blue-500" un-cloak>
+  This text will only be visible in blue color.
+</div>
+```

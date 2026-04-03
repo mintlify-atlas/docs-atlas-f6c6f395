@@ -1,0 +1,335 @@
+---
+title: "Extractors"
+description: "Configure how UnoCSS scans your source files for utility class usage."
+---
+
+Extractors are responsible for scanning source files and returning the set of candidate utility tokens that the generator should attempt to match against rules. You can use multiple extractors at once — their results are merged together.
+
+## How extractors work
+
+When `generator.generate(source)` receives a source string, it calls each extractor in `config.extractors` with an `ExtractorContext`:
+
+```ts
+interface ExtractorContext {
+  readonly original: string   // original unmodified source
+  code: string                // current (possibly transformed) source
+  id?: string                 // file path, if known
+  extracted: Set<string> | CountableSet<string>
+  envMode?: 'dev' | 'build'
+}
+```
+
+Each extractor returns a set (or array) of candidate token strings. Tokens from all extractors are merged before matching begins.
+
+## The default extractor
+
+By default, UnoCSS uses `extractorSplit`, which tokenizes source code by splitting on whitespace and common quote characters (`"`, `'`, `` ` ``). This covers most HTML, JSX, and template syntax without any configuration.
+
+```ts
+// extractorSplit is applied automatically — no setup needed
+const { css } = await generator.generate(
+  `<div class="flex p-4 hover:bg-blue-500">Hello</div>`,
+)
+```
+
+To override the default extractor, use the `extractorDefault` option:
+
+```ts
+import { defineConfig } from 'unocss'
+
+export default defineConfig({
+  // replace the default extractor with a custom one
+  extractorDefault: myCustomExtractor,
+
+  // or disable it entirely
+  extractorDefault: false,
+})
+```
+
+<Note>
+  Only one `extractorDefault` can be active at a time. If multiple presets or configs define one, the last definition wins.
+</Note>
+
+## Built-in extractors
+
+### `@unocss/extractor-arbitrary-variants`
+
+Enables extraction of utilities that use arbitrary bracket values as variant selectors, such as `[&>*]:m-1` or `[&[open]]:p-2`.
+
+<Note>
+  This extractor is already included in `@unocss/preset-mini` (and therefore in `unocss`). You only need to install it manually if you are using `@unocss/core` without any presets.
+</Note>
+
+**Installation**
+
+<CodeGroup>
+```bash npm
+npm install -D @unocss/extractor-arbitrary-variants
+```
+
+```bash pnpm
+pnpm add -D @unocss/extractor-arbitrary-variants
+```
+
+```bash yarn
+yarn add -D @unocss/extractor-arbitrary-variants
+```
+
+```bash bun
+bun add -D @unocss/extractor-arbitrary-variants
+```
+</CodeGroup>
+
+**Usage**
+
+```ts
+import extractorArbitrary from '@unocss/extractor-arbitrary-variants'
+import { defineConfig } from 'unocss'
+
+export default defineConfig({
+  extractors: [
+    extractorArbitrary(),
+  ],
+})
+```
+
+With this extractor, complex selector variants in brackets are correctly captured:
+
+```html
+<ul class="[&>*]:m-1 [&[open]]:p-2">...</ul>
+```
+
+---
+
+### `@unocss/extractor-svelte`
+
+Extracts class tokens from Svelte's `class:` directive syntax.
+
+Without this extractor, `class:text-orange-400={foo}` would not be recognized because the token contains `=` and the default splitter would break it apart.
+
+**Installation**
+
+<CodeGroup>
+```bash npm
+npm install -D @unocss/extractor-svelte
+```
+
+```bash pnpm
+pnpm add -D @unocss/extractor-svelte
+```
+
+```bash yarn
+yarn add -D @unocss/extractor-svelte
+```
+
+```bash bun
+bun add -D @unocss/extractor-svelte
+```
+</CodeGroup>
+
+**Usage**
+
+```ts
+import extractorSvelte from '@unocss/extractor-svelte'
+import { defineConfig } from 'unocss'
+
+export default defineConfig({
+  extractors: [
+    extractorSvelte(),
+  ],
+})
+```
+
+The extractor handles directives like:
+
+```svelte
+<div class:text-orange-400={isHighlighted} />
+```
+
+This generates:
+
+```css
+.text-orange-400 {
+  color: #f6993f;
+}
+```
+
+---
+
+### `@unocss/extractor-pug`
+
+Extracts class tokens from [Pug](https://pugjs.org) templates.
+
+**Installation**
+
+<CodeGroup>
+```bash npm
+npm install -D @unocss/extractor-pug
+```
+
+```bash pnpm
+pnpm add -D @unocss/extractor-pug
+```
+
+```bash yarn
+yarn add -D @unocss/extractor-pug
+```
+
+```bash bun
+bun add -D @unocss/extractor-pug
+```
+</CodeGroup>
+
+**Usage**
+
+```ts
+import extractorPug from '@unocss/extractor-pug'
+import { defineConfig } from 'unocss'
+
+export default defineConfig({
+  extractors: [
+    extractorPug(),
+  ],
+})
+```
+
+Pug class shorthand syntax (`.class-name`) and attribute syntax are both recognized:
+
+```pug
+div.flex.p-4
+  span(class="text-red-500") Hello
+```
+
+---
+
+### `@unocss/extractor-mdc`
+
+Extracts class tokens from [MDC (Markdown Components)](https://content.nuxtjs.org/guide/writing/mdc) syntax, used in Nuxt Content.
+
+**Installation**
+
+<CodeGroup>
+```bash npm
+npm install -D @unocss/extractor-mdc
+```
+
+```bash pnpm
+pnpm add -D @unocss/extractor-mdc
+```
+
+```bash yarn
+yarn add -D @unocss/extractor-mdc
+```
+
+```bash bun
+bun add -D @unocss/extractor-mdc
+```
+</CodeGroup>
+
+**Usage**
+
+```ts
+import extractorMdc from '@unocss/extractor-mdc'
+import { defineConfig } from 'unocss'
+
+export default defineConfig({
+  extractors: [
+    extractorMdc(),
+  ],
+})
+```
+
+The extractor targets `.md`, `.mdc`, and `.markdown` files and picks up inline prop class usage:
+
+```md
+# Title{.text-2xl.font-bold}
+
+Hello [World]{.text-blue-500}
+
+![image](/image.png){.w-32.h-32}
+```
+
+This extracts `text-2xl`, `font-bold`, `text-blue-500`, `w-32`, and `h-32`.
+
+---
+
+## Writing a custom extractor
+
+An extractor is any object that satisfies the `Extractor` interface:
+
+```ts
+interface Extractor {
+  name: string
+  order?: number
+  extract?: (ctx: ExtractorContext) => Awaitable<
+    Set<string> | CountableSet<string> | string[] | undefined | void
+  >
+}
+```
+
+<ParamField path="name" type="string" required>
+  Unique identifier for the extractor. Used for debugging and deduplication.
+</ParamField>
+
+<ParamField path="order" type="number">
+  Determines the order in which extractors run relative to each other. Lower values run first. Defaults to `0`.
+</ParamField>
+
+<ParamField path="extract" type="(ctx: ExtractorContext) => Awaitable<Set<string> | string[] | undefined | void>" required>
+  The extraction function. Return a set or array of candidate token strings. Return `undefined` or `void` to skip this extractor for the current file.
+</ParamField>
+
+### Example: attribute extractor
+
+The following extractor picks up all `data-uno` attribute values:
+
+```ts
+import { defineConfig } from 'unocss'
+
+const extractorDataUno = {
+  name: 'extractor-data-uno',
+  extract({ code }) {
+    const tokens = new Set<string>()
+    // match data-uno="..." attributes
+    for (const match of code.matchAll(/data-uno="([^"]+)"/g)) {
+      for (const token of match[1].split(/\s+/))
+        tokens.add(token)
+    }
+    return tokens
+  },
+}
+
+export default defineConfig({
+  extractors: [extractorDataUno],
+})
+```
+
+### File-type filtering
+
+Use the `id` field on the context to limit extraction to specific file types:
+
+```ts
+const extractorTypescript = {
+  name: 'extractor-typescript',
+  extract({ code, id }) {
+    if (!id?.endsWith('.ts') && !id?.endsWith('.tsx'))
+      return
+
+    // process TypeScript files only
+    return new Set(code.match(/cn\(([^)]+)\)/g) ?? [])
+  },
+}
+```
+
+### Ordering multiple extractors
+
+When you need one extractor to run before another, use the `order` field:
+
+```ts
+export default defineConfig({
+  extractors: [
+    { name: 'first', order: -10, extract: () => new Set(['always-included']) },
+    { name: 'second', order: 10, extract: ({ code }) => code.split(/\s+/) },
+  ],
+})
+```

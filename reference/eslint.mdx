@@ -1,0 +1,209 @@
+---
+title: "ESLint Integration"
+description: "ESLint plugin and config for enforcing UnoCSS best practices."
+---
+
+UnoCSS provides two ESLint packages: a plugin (`@unocss/eslint-plugin`) that contains the individual rules, and a shareable config (`@unocss/eslint-config`) that bundles the plugin with recommended rule settings.
+
+## `@unocss/eslint-config`
+
+The easiest way to get started. It installs the plugin and enables the recommended rules in one step.
+
+### Installation
+
+<CodeGroup>
+```bash npm
+npm install -D @unocss/eslint-config
+```
+
+```bash pnpm
+pnpm add -D @unocss/eslint-config
+```
+
+```bash yarn
+yarn add -D @unocss/eslint-config
+```
+
+```bash bun
+bun add -D @unocss/eslint-config
+```
+</CodeGroup>
+
+### Configuration
+
+**Flat config** (`eslint.config.js`):
+
+```js
+import unocss from '@unocss/eslint-config/flat'
+
+export default [
+  unocss,
+  // your other configs
+]
+```
+
+**Legacy `.eslintrc` style**:
+
+```json
+{
+  "extends": ["@unocss"]
+}
+```
+
+---
+
+## Available rules
+
+### `@unocss/order` _(enabled by default)_
+
+Enforces a consistent sort order for UnoCSS utility class names. The rule understands variant prefixes and sorts them predictably so that diffs are minimal and readable.
+
+**Options:**
+
+<ParamField path="unoFunctions" type="string[]" default='["clsx", "classnames"]'>
+  Function call names where the rule is applied to the arguments. Names are matched case-insensitively. For example, `['clsx', 'classnames']` means the rule checks class strings passed to `clsx(...)` and `classnames(...)`.
+</ParamField>
+
+<ParamField path="unoVariables" type="string[]" default='["^cls", "classNames?$"]'>
+  Variable declaration name patterns (regex) where the rule is applied. For example, `['^cls', 'classNames?$']` matches variable names like `clsButton` and `buttonClassNames`.
+</ParamField>
+
+---
+
+### `@unocss/order-attributify` _(enabled by default)_
+
+Enforces a consistent sort order for attributify selectors (e.g. `p`, `m`, `text` attributes when using `@unocss/preset-attributify`).
+
+---
+
+### `@unocss/blocklist` _(optional)_
+
+Warns or errors when a utility from your `blocklist` configuration is used. Custom messages configured in `blocklist` metadata are surfaced as the lint message.
+
+```ts
+// uno.config.ts
+export default defineConfig({
+  blocklist: [
+    ['bg-red-500', { message: 'Use bg-red-600 instead' }],
+    [/-auto$/, { message: s => `Use ${s.replace(/-auto$/, '-a')} instead` }],
+  ],
+})
+```
+
+With the rule enabled, using `bg-red-500` in source code produces:
+
+```
+error  'bg-red-500' is in blocklist: Use bg-red-600 instead  @unocss/blocklist
+```
+
+---
+
+### `@unocss/enforce-class-compile` _(optional, auto-fixable)_ 
+
+Requires class attributes and directives to start with the `:uno:` prefix, enforcing use of the [compile class transformer](/transformers/compile-class).
+
+The rule supports auto-fix (`--fix`) and automatically prepends `:uno:` to any non-conforming class attribute.
+
+**Options:**
+
+<ParamField path="prefix" type="string" default='":uno:"'>
+  The required prefix. Change this if you configured a custom prefix in `transformerCompileClass`.
+</ParamField>
+
+<ParamField path="enableFix" type="boolean" default="true">
+  Set to `false` to report violations without auto-fixing. Useful for gradual adoption.
+</ParamField>
+
+<Warning>
+  `@unocss/enforce-class-compile` currently only supports Vue single-file components. Svelte users should use a different compilation approach for scoped CSS.
+</Warning>
+
+---
+
+## Enabling optional rules
+
+Optional rules are not enabled by the shareable config. Add them explicitly:
+
+**Flat config:**
+
+```js
+import unocss from '@unocss/eslint-config/flat'
+
+export default [
+  {
+    ...unocss,
+    rules: {
+      ...unocss.rules,
+      '@unocss/blocklist': 'warn',
+      '@unocss/enforce-class-compile': ['warn', { enableFix: false }],
+    },
+  },
+]
+```
+
+**Legacy `.eslintrc`:**
+
+```json
+{
+  "extends": ["@unocss"],
+  "rules": {
+    "@unocss/blocklist": "warn",
+    "@unocss/enforce-class-compile": ["warn", { "enableFix": false }]
+  }
+}
+```
+
+---
+
+## Using the plugin directly
+
+If you want to configure rules manually without the shareable config, install the plugin package:
+
+<CodeGroup>
+```bash npm
+npm install -D @unocss/eslint-plugin
+```
+
+```bash pnpm
+pnpm add -D @unocss/eslint-plugin
+```
+
+```bash yarn
+yarn add -D @unocss/eslint-plugin
+```
+
+```bash bun
+bun add -D @unocss/eslint-plugin
+```
+</CodeGroup>
+
+**Flat config:**
+
+```js
+import pluginUnocss from '@unocss/eslint-plugin'
+
+export default [
+  {
+    plugins: {
+      '@unocss': pluginUnocss,
+    },
+    rules: {
+      '@unocss/order': 'warn',
+      '@unocss/order-attributify': 'warn',
+      '@unocss/blocklist': 'error',
+    },
+  },
+]
+```
+
+**Legacy `.eslintrc`:**
+
+```json
+{
+  "plugins": ["@unocss"],
+  "rules": {
+    "@unocss/order": "warn",
+    "@unocss/order-attributify": "warn"
+  }
+}
+```

@@ -1,0 +1,116 @@
+---
+title: "Presets Overview"
+description: "Official UnoCSS presets for Tailwind compatibility, icons, typography, and more."
+---
+
+Presets are the heart of UnoCSS. They bundle rules, variants, and theme configuration into reusable packages. You can combine multiple presets in a single project, and the engine merges them together on demand.
+
+## Adding presets to your config
+
+Install the preset package, then register it in your `uno.config.ts`:
+
+```ts
+import presetWind3 from '@unocss/preset-wind3'
+import presetIcons from '@unocss/preset-icons'
+import { defineConfig } from 'unocss'
+
+export default defineConfig({
+  presets: [
+    presetWind3(),
+    presetIcons(),
+    // ...add more presets here
+  ],
+})
+```
+
+<Tip>
+All official presets are also re-exported from the `unocss` package, so you can import from a single location:
+
+```ts
+import { presetWind3, presetIcons, presetTypography } from 'unocss'
+```
+</Tip>
+
+## Official presets
+
+<CardGroup cols={2}>
+  <Card title="Preset Wind" icon="wind" href="/presets/wind">
+    Tailwind CSS v3 and Windi CSS compatible utilities. The recommended starting point for most projects.
+  </Card>
+  <Card title="Preset Mini" icon="minimize" href="/presets/mini">
+    A minimal subset of Wind utilities — only the most essential CSS-property-aligned rules.
+  </Card>
+  <Card title="Preset Attributify" icon="tag" href="/presets/attributify">
+    Group utilities into HTML attributes for cleaner, more readable markup.
+  </Card>
+  <Card title="Preset Icons" icon="icons" href="/presets/icons">
+    Use any Iconify icon as a pure CSS class — no runtime JS, no layout shift.
+  </Card>
+  <Card title="Preset Typography" icon="text" href="/presets/typography">
+    Prose classes for beautiful typographic defaults applied to HTML content.
+  </Card>
+  <Card title="Preset Web Fonts" icon="font" href="/presets/web-fonts">
+    Auto-generate `font-family` utilities from Google Fonts, Bunny Fonts, FontShare, and more.
+  </Card>
+</CardGroup>
+
+### All official packages
+
+| Package | Description |
+|---|---|
+| `@unocss/preset-mini` | The minimal but essential rules and variants |
+| `@unocss/preset-wind3` | Tailwind CSS / Windi CSS compact preset |
+| `@unocss/preset-wind4` | Tailwind CSS v4 compact preset (experimental) |
+| `@unocss/preset-attributify` | Enables attributify mode for other rules |
+| `@unocss/preset-tagify` | Enables tagify mode for other rules |
+| `@unocss/preset-icons` | Pure CSS icons powered by Iconify |
+| `@unocss/preset-web-fonts` | Web fonts (Google Fonts, etc.) support |
+| `@unocss/preset-typography` | Typography prose classes |
+| `@unocss/preset-rem-to-px` | Converts rem to px for utilities |
+
+<Note>
+`@unocss/preset-wind` and `@unocss/preset-uno` are deprecated and have been renamed to `@unocss/preset-wind3`.
+</Note>
+
+## Tagify mode
+
+`@unocss/preset-tagify` enables tagify mode — where you use a utility class name directly as an HTML tag. This is useful for single-utility elements.
+
+```ts
+import { defineConfig, presetTagify } from 'unocss'
+
+export default defineConfig({
+  presets: [
+    presetTagify({ /* options */ }),
+  ],
+})
+```
+
+With tagify mode enabled, you can write:
+
+```html
+<text-red> Red text </text-red>
+<flex> Flex container </flex>
+<p2> 8px padding element </p2>
+```
+
+Instead of:
+
+```html
+<span class="text-red"> Red text </span>
+<div class="flex"> Flex container </div>
+<p class="p-2"> 8px padding element </p>
+```
+
+Use the `prefix` option to namespace your tag utilities:
+
+```ts
+presetTagify({
+  prefix: 'un-',
+  // <un-flex>, <un-text-red>, etc.
+})
+```
+
+## Community presets
+
+The [UnoCSS community](https://github.com/unocss-community) maintains additional presets and integrations. Browse [Awesome UnoCSS](https://github.com/unocss-community/awesome-unocss) for a curated list of community-built resources.

@@ -1,0 +1,71 @@
+---
+title: "Why UnoCSS?"
+description: "How UnoCSS compares to Tailwind CSS, Windi CSS, and other atomic CSS approaches."
+---
+
+## Motivation
+
+UnoCSS was created by [Anthony Fu](https://antfu.me/), who wrote about the thinking behind it in the blog post [Reimagine Atomic CSS](https://antfu.me/posts/reimagine-atomic-css). The core idea: instead of shipping a fixed set of utilities, build an atomic CSS _engine_ where every feature is optional and composable via presets.
+
+The result is a tool with no opinions baked in. You can replicate Tailwind's utility set, Windi CSS's conventions, or build an entirely custom design system — all from the same engine.
+
+## UnoCSS vs Windi CSS
+
+UnoCSS was started by a member of the Windi CSS team. Windi CSS is no longer actively maintained (as of March 2023), and UnoCSS is its spiritual successor.
+
+UnoCSS inherits many of Windi CSS's ideas:
+
+- On-demand generation (scan source, emit only what's used)
+- [Attributify mode](/presets/attributify) — write utilities as HTML attributes
+- [Shortcuts](/config/shortcuts) — alias groups of utilities
+- [Variant groups](/transformers/variant-group) — `hover:(bg-red-500 text-white)`
+- [Compilation mode](/transformers/compile-class) — combine classes at build time
+
+On top of that, UnoCSS was rebuilt from scratch with extensibility and performance as primary goals, enabling features that weren't practical in Windi CSS: pure CSS icons, valueless attributify, tagify, web fonts, and more.
+
+## UnoCSS vs Tailwind CSS
+
+Both tools draw inspiration from the same atomic CSS philosophy, but they have different design goals.
+
+**Architecture**
+
+Tailwind CSS is a PostCSS plugin. UnoCSS is an isomorphic engine with first-class integrations for build tools, including Vite, webpack, Nuxt, Astro, and a PostCSS plugin. This means UnoCSS can run in environments where PostCSS cannot — for example, as a CDN runtime that generates CSS directly in the browser, or with deep HMR integration in Vite.
+
+**Extensibility**
+
+Tailwind CSS is opinionated. Its plugin system and configuration exist within Tailwind's own conventions, and moving away from those conventions is difficult.
+
+UnoCSS is fully extensible. The entire Tailwind-compatible utility set is implemented as a single preset (`preset-wind3`). You can use that preset, extend it, replace it, or build something entirely different. There are many community presets implementing other approaches.
+
+**Innovative features enabled by UnoCSS's flexibility**
+
+<CardGroup cols={2}>
+  <Card title="Pure CSS icons" icon="image">
+    Use any Iconify icon as a CSS utility class — no icon fonts, no SVG sprites. Works at build time or via CDN.
+  </Card>
+  <Card title="Attributify mode" icon="tag">
+    Group related utilities into HTML attributes: `<div text="sm blue" bg="gray-100">`. Reduces class string clutter.
+  </Card>
+  <Card title="CDN runtime" icon="globe">
+    Drop a script tag in any HTML page and start using utility classes immediately — no build tooling required.
+  </Card>
+  <Card title="Inspector" icon="magnifying-glass">
+    A built-in DevTools panel showing exactly which utilities were matched and what CSS was generated from each file.
+  </Card>
+  <Card title="Web fonts preset" icon="font">
+    Define web font providers in config and get the `@font-face` rules generated automatically.
+  </Card>
+  <Card title="Variant groups" icon="layer-group">
+    Write `hover:(bg-red-500 text-white)` instead of repeating the `hover:` prefix on every utility.
+  </Card>
+</CardGroup>
+
+## When not to use UnoCSS
+
+UnoCSS does not support Tailwind CSS's plugin system or its configuration format. Migrating a project that relies heavily on custom Tailwind plugins, or that depends on specific Tailwind configuration conventions, will require rewriting those customizations as UnoCSS rules or presets.
+
+<Warning>
+  If your project has significant investment in Tailwind's plugin ecosystem or custom Tailwind configurations, evaluate the migration cost before switching. UnoCSS intentionally does not provide a compatibility layer for Tailwind plugins.
+</Warning>
+
+This is a deliberate trade-off: dropping that compatibility is what allows UnoCSS to be high-performance and fully extensible. For new projects, or projects with minimal Tailwind customization, the trade-off is generally worth it.

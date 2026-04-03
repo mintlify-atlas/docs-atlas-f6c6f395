@@ -1,0 +1,377 @@
+---
+title: "Config Options Reference"
+description: "Complete reference for all UnoCSS configuration options."
+---
+
+All options below can be passed to `defineConfig()` or directly to `createGenerator()`. Options defined in your config take priority over those contributed by presets.
+
+```ts
+import { defineConfig } from 'unocss'
+
+export default defineConfig({
+  // options here
+})
+```
+
+## Rules
+
+<ParamField path="rules" type="Rule<Theme>[]">
+  CSS utility rules. Each rule is either a static rule `[string, CSSObject]` or a dynamic rule `[RegExp, DynamicMatcher]`. Rules contributed later in the array take priority over earlier ones.
+
+  ```ts
+  rules: [
+    // static rule
+    ['flex', { display: 'flex' }],
+    // dynamic rule
+    [/^m-(\d+)$/, ([, d]) => ({ margin: `${Number(d) / 4}rem` })],
+  ]
+  ```
+</ParamField>
+
+## Shortcuts
+
+<ParamField path="shortcuts" type="UserShortcuts<Theme>">
+  Create new utilities by combining existing ones. Accepts a plain object map, an array of static/dynamic shortcut tuples, or a mix of both. Later entries take priority.
+
+  ```ts
+  shortcuts: {
+    'btn': 'py-2 px-4 font-semibold rounded-lg shadow-md',
+    'btn-primary': 'btn bg-blue-500 text-white',
+  }
+  ```
+
+  Dynamic shortcuts use the same tuple syntax as rules:
+
+  ```ts
+  shortcuts: [
+    [/^btn-(.+)$/, ([, c]) => `btn bg-${c}-500 text-white`],
+  ]
+  ```
+</ParamField>
+
+<ParamField path="shortcutsLayer" type="string" default='"shortcuts"'>
+  The layer name where shortcut CSS is output.
+</ParamField>
+
+## Theme
+
+<ParamField path="theme" type="Theme">
+  Shared theme object available to rule matchers via `context.theme`. When multiple presets or configs define a theme, objects are deep-merged with later definitions taking priority.
+
+  ```ts
+  theme: {
+    colors: {
+      primary: '#1a56db',
+    },
+    spacing: {
+      sm: '0.5rem',
+    },
+  }
+  ```
+</ParamField>
+
+<ParamField path="extendTheme" type="Arrayable<ThemeExtender<Theme>>">
+  One or more functions that mutate (or replace) the resolved theme object after all preset themes have been merged. Receives the merged theme and the resolved config.
+
+  ```ts
+  extendTheme: (theme) => {
+    theme.colors.custom = '#ff0000'
+  }
+  ```
+
+  Return a new object to fully replace the theme:
+
+  ```ts
+  extendTheme: (theme) => ({ ...theme, spacing: { base: '4px' } })
+  ```
+</ParamField>
+
+## Variants
+
+<ParamField path="variants" type="Variant<Theme>[]">
+  Variant processors that strip prefixes from tokens (e.g. `hover:`, `dark:`) and rewrite selectors or CSS. Each variant is either a function or a `VariantObject` with a `match` method.
+
+  ```ts
+  variants: [
+    {
+      name: 'important',
+      match(matcher) {
+        if (!matcher.startsWith('!'))
+          return
+        return {
+          matcher: matcher.slice(1),
+          body: (body) => body.map(([k, v]) => [k, `${v} !important`]),
+        }
+      },
+    },
+  ]
+  ```
+</ParamField>
+
+<ParamField path="separators" type="Arrayable<string>" default="[':', '-']">
+  Characters used to split variant prefixes from the utility name. Both `:` and `-` are recognized by default.
+</ParamField>
+
+## Extractors
+
+<ParamField path="extractors" type="Extractor[]">
+  Additional extractors that scan source code for utility tokens. All extractors run and their results are merged. See [Extractors](/reference/extractors) for built-in options and how to write custom extractors.
+
+  ```ts
+  import extractorSvelte from '@unocss/extractor-svelte'
+
+  extractors: [extractorSvelte()]
+  ```
+</ParamField>
+
+<ParamField path="extractorDefault" type="Extractor | null | false" default="extractorSplit">
+  The default extractor, which splits source code on whitespace and common quote characters. Only one default extractor is active at a time — later values override earlier ones.
+
+  Set to `null` or `false` to disable the default extractor entirely.
+
+  ```ts
+  // disable the default extractor
+  extractorDefault: false,
+  ```
+</ParamField>
+
+## Preflights
+
+<ParamField path="preflights" type="Preflight<Theme>[]">
+  Raw CSS injected before generated utilities. Useful for CSS resets or global custom properties.
+
+  ```ts
+  preflights: [
+    {
+      layer: 'preflights',
+      getCSS: () => `*, *::before, *::after { box-sizing: border-box; }`,
+    },
+  ]
+  ```
+</ParamField>
+
+## Layers
+
+<ParamField path="layers" type="Record<string, number>" default="{}">
+  Numeric sort order for each named layer. Lower numbers appear earlier in the output. Built-in layers (`preflights`, `shortcuts`, `default`) have default order values set internally.
+
+  ```ts
+  layers: {
+    preflights: -1,
+    default: 1,
+    utilities: 2,
+  }
+  ```
+</ParamField>
+
+<ParamField path="sortLayers" type="(layers: string[]) => string[]">
+  Custom function to control layer ordering. Receives the sorted layer name array and should return the desired order.
+</ParamField>
+
+<ParamField path="outputToCssLayers" type="boolean | OutputCssLayersOptions" default="false">
+  Wrap each internal UnoCSS layer in a native CSS `@layer` declaration.
+
+  ```ts
+  // simple: use internal layer names as CSS layer names
+  outputToCssLayers: true,
+
+  // advanced: customize CSS layer names
+  outputToCssLayers: {
+    cssLayerName: (layer) => layer === 'default' ? 'utilities' : layer,
+    allLayers: true,
+  }
+  ```
+
+  <ParamField path="outputToCssLayers.cssLayerName" type="(internalLayer: string) => string | undefined | null">
+    Maps an internal layer name to a CSS layer name. Return `undefined` to keep the internal name, `null` to exclude the layer from `@layer` output.
+  </ParamField>
+
+  <ParamField path="outputToCssLayers.allLayers" type="boolean">
+    When `true`, emits an `@layer` ordering declaration for all configured layers, even unused ones.
+  </ParamField>
+</ParamField>
+
+## Presets
+
+<ParamField path="presets" type="(PresetOrFactory<Theme> | PresetOrFactory<Theme>[])[]">
+  Predefined configurations that bundle rules, shortcuts, variants, and theme. Presets marked with `enforce: 'pre'` are applied before others; `enforce: 'post'` presets apply last.
+
+  ```ts
+  import { presetMini, presetAttributify } from 'unocss'
+
+  presets: [
+    presetMini(),
+    presetAttributify(),
+  ]
+  ```
+</ParamField>
+
+## Transformers
+
+<ParamField path="transformers" type="SourceCodeTransformer[]">
+  Source code transformers run against each module before extraction, enabling syntax sugar like variant groups or compile classes. Each transformer must have a unique `name`.
+
+  ```ts
+  import transformerVariantGroup from '@unocss/transformer-variant-group'
+
+  transformers: [transformerVariantGroup()]
+  ```
+</ParamField>
+
+## Blocklist
+
+<ParamField path="blocklist" type="BlocklistRule[]">
+  Selectors or patterns to exclude from generation. Accepts strings (exact match), regular expressions, or predicate functions. Optionally pair with a metadata object to customize warning messages.
+
+  ```ts
+  blocklist: [
+    'bg-red-500',
+    /^text-(?:sm|xs)$/,
+    (selector) => selector.startsWith('debug-'),
+    ['bg-green-500', { message: 'Use bg-emerald-500 instead' }],
+  ]
+  ```
+</ParamField>
+
+## Safelist
+
+<ParamField path="safelist" type="(string | ((context: SafeListContext<Theme>) => Arrayable<string>))[]">
+  Utilities always included in the output regardless of whether they appear in source code. Accepts strings or functions that receive the generator context and return strings.
+
+  ```ts
+  safelist: [
+    'flex',
+    'p-4',
+    (ctx) => ctx.theme.colors
+      ? Object.keys(ctx.theme.colors).map(c => `text-${c}-500`)
+      : [],
+  ]
+  ```
+</ParamField>
+
+## Pre/post processing
+
+<ParamField path="preprocess" type="Arrayable<Preprocessor>">
+  Functions called on each token string before matching. Return a new string to transform the token, or a falsy value to exclude it.
+
+  ```ts
+  preprocess: [
+    (matcher) => matcher.startsWith('--') ? undefined : matcher,
+  ]
+  ```
+</ParamField>
+
+<ParamField path="postprocess" type="Arrayable<Postprocessor>">
+  Functions called on each generated `UtilObject` after matching. Can mutate the object in place or return a new one.
+
+  ```ts
+  postprocess: [
+    (util) => {
+      util.entries.forEach(entry => {
+        if (entry[0] === 'color')
+          entry[1] = `${entry[1]} /* custom */`
+      })
+    },
+  ]
+  ```
+</ParamField>
+
+## Content sources
+
+The `content` option controls which source files UnoCSS scans for utility tokens.
+
+<ParamField path="content.filesystem" type="string[]" default="[]">
+  Glob patterns for files to extract from the file system. In dev mode these files are watched and trigger HMR.
+
+  ```ts
+  content: {
+    filesystem: ['src/**/*.html', 'public/**/*.svg'],
+  }
+  ```
+</ParamField>
+
+<ParamField path="content.inline" type="(string | { code: string; id?: string } | (() => Awaitable<...>))[]">
+  Static strings or async functions that return source code to scan. Useful for CSS-in-JS or generated markup.
+
+  ```ts
+  content: {
+    inline: [
+      '<div class="flex p-4">',
+      { code: 'text-red-500', id: 'virtual.ts' },
+    ],
+  }
+  ```
+</ParamField>
+
+<ParamField path="content.pipeline" type="false | { include?: FilterPattern; exclude?: FilterPattern }">
+  Controls which modules from the build pipeline (Vite, Webpack) are extracted. Set to `false` to disable pipeline extraction entirely.
+
+  <ParamField path="content.pipeline.include" type="FilterPattern" default="[/\.(vue|svelte|[jt]sx|mdx?|astro|html)($|\?)/]">
+    Patterns selecting files to extract. `.ts` and `.js` files are excluded by default.
+  </ParamField>
+
+  <ParamField path="content.pipeline.exclude" type="FilterPattern" default="[/\.(css|postcss|sass|scss|less|styl)($|\?)/]">
+    Patterns selecting files to skip.
+  </ParamField>
+</ParamField>
+
+## Autocomplete
+
+<ParamField path="autocomplete.templates" type="Arrayable<AutoCompleteFunction | AutoCompleteTemplate>">
+  Additional autocomplete suggestion templates or functions, supplementing those provided by rules and presets.
+
+  ```ts
+  autocomplete: {
+    templates: ['(border|b)-<num>'],
+  }
+  ```
+</ParamField>
+
+<ParamField path="autocomplete.extractors" type="Arrayable<AutoCompleteExtractor>">
+  Custom extractors that identify where in the source cursor position suggestions should be offered and how to format them.
+</ParamField>
+
+<ParamField path="autocomplete.shorthands" type="Record<string, string | string[]>">
+  Named shorthand expansions used inside autocomplete templates. Arrays are joined with `|` and wrapped in `()`.
+
+  ```ts
+  autocomplete: {
+    shorthands: {
+      sizes: ['sm', 'md', 'lg', 'xl'],
+    },
+  }
+  // Use as $sizes in templates
+  ```
+</ParamField>
+
+## Plugin / build tool options
+
+<ParamField path="configFile" type="string | false">
+  Path to the UnoCSS config file. Set to `false` to disable config file loading (useful in programmatic use).
+</ParamField>
+
+<ParamField path="configDeps" type="string[]">
+  Additional file paths that trigger a config reload when changed in dev mode.
+</ParamField>
+
+<ParamField path="configResolved" type="(config: ResolvedConfig<Theme>) => void">
+  Hook called after the config is fully resolved. All preset hooks run before the user config hook.
+</ParamField>
+
+## Generator behavior
+
+<ParamField path="mergeSelectors" type="boolean" default="true">
+  Merge multiple utilities with identical CSS bodies into a single rule with a comma-separated selector list, reducing output size.
+</ParamField>
+
+<ParamField path="warn" type="boolean" default="true">
+  Emit console warnings when a matched token appears in the `blocklist`.
+</ParamField>
+
+<ParamField path="details" type="boolean" default="true in dev mode, false in build">
+  Attach rule, shortcut, and variant metadata to the rule context. Enables inspector tooling. Automatically enabled when `envMode` is `'dev'`.
+</ParamField>
+
+<ParamField path="envMode" type='"dev" | "build"' default='"build"'>
+  Controls whether the generator is in development or production mode. Affects defaults for `details` and extractor context.
+</ParamField>

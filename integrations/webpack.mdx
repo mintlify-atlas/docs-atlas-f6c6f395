@@ -1,0 +1,205 @@
+---
+title: "Webpack"
+description: "Integrate UnoCSS with Webpack 4/5 and frameworks like Next.js."
+---
+
+The Webpack plugin for UnoCSS: `@unocss/webpack`. Currently supports the `global` mode only.
+
+<Note>
+  This plugin does not include any default presets. You must configure at least one preset in `uno.config.ts`.
+</Note>
+
+## Prerequisites
+
+`@unocss/webpack` requires `style-loader` and `css-loader` to handle CSS files.
+
+## Installation
+
+<Steps>
+  <Step title="Install the package">
+    <CodeGroup>
+
+    ```bash npm
+    npm install -D @unocss/webpack
+    ```
+
+    ```bash yarn
+    yarn add -D @unocss/webpack
+    ```
+
+    ```bash pnpm
+    pnpm add -D @unocss/webpack
+    ```
+
+    ```bash bun
+    bun add -D @unocss/webpack
+    ```
+
+    </CodeGroup>
+  </Step>
+  <Step title="Configure webpack.config.js">
+    From UnoCSS `v0.59.0`, UnoCSS is ESM-only and must be loaded via dynamic import:
+
+    <CodeGroup>
+
+    ```js webpack 5
+    // webpack.config.js
+    module.exports = function () {
+      return import('@unocss/webpack').then(({ default: UnoCSS }) => ({
+        plugins: [
+          UnoCSS()
+        ],
+        optimization: {
+          realContentHash: true
+        }
+      }))
+    }
+    ```
+
+    ```js webpack 4
+    // webpack.config.js
+    module.exports = function () {
+      return import('@unocss/webpack').then(({ default: UnoCSS }) => ({
+        plugins: [
+          UnoCSS()
+        ],
+        css: {
+          extract: {
+            filename: '[name].[hash:9].css'
+          },
+        },
+      }))
+    }
+    ```
+
+    </CodeGroup>
+
+    If you're using an older version of UnoCSS (before `v0.59.0`), you can use `require()` instead:
+
+    <CodeGroup>
+
+    ```js webpack 5
+    // webpack.config.js
+    const UnoCSS = require('@unocss/webpack').default
+
+    module.exports = {
+      plugins: [
+        UnoCSS()
+      ],
+      optimization: {
+        realContentHash: true
+      }
+    }
+    ```
+
+    ```js webpack 4
+    // webpack.config.js
+    const UnoCSS = require('@unocss/webpack').default
+
+    module.exports = {
+      plugins: [
+        UnoCSS()
+      ],
+      css: {
+        extract: {
+          filename: '[name].[hash:9].css'
+        }
+      }
+    }
+    ```
+
+    </CodeGroup>
+  </Step>
+  <Step title="Create a UnoCSS config file">
+    ```ts uno.config.ts
+    import { defineConfig } from 'unocss'
+
+    export default defineConfig({
+      // ...UnoCSS options
+    })
+    ```
+  </Step>
+  <Step title="Import uno.css in your entry file">
+    ```ts main.ts
+    import 'uno.css'
+    ```
+  </Step>
+</Steps>
+
+<Warning>
+  Webpack 4 does not support `optimization.realContentHash`. Use `css.extract.filename` to customize the CSS filename instead (for example, using the first 9 characters of a hash). See this [known issue](https://github.com/unocss/unocss/issues/1728) and [webpack#9520](https://github.com/webpack/webpack/issues/9520#issuecomment-749534245) for details.
+</Warning>
+
+## Frameworks
+
+### Vue + Vue CLI
+
+If you're using [Vue CLI](https://cli.vuejs.org/) with webpack 4/5 and UnoCSS `v0.59.0` or later, you need [Vue CLI Service](https://cli.vuejs.org/guide/cli-service.html) `v5.0.8+` to load the config via dynamic import:
+
+<CodeGroup>
+
+```js webpack 5
+// vue.config.js
+const process = require('node:process')
+
+module.exports = function () {
+  return import('@unocss/webpack').then(({ default: UnoCSS }) => ({
+    configureWebpack: {
+      devtool: 'inline-source-map',
+      plugins: [
+        UnoCSS()
+      ],
+      optimization: {
+        realContentHash: true
+      }
+    },
+    chainWebpack(config) {
+      config.module.rule('vue').uses.delete('cache-loader')
+      config.module.rule('tsx').uses.delete('cache-loader')
+      config.merge({
+        cache: false
+      })
+    },
+    css: {
+      extract: process.env.NODE_ENV === 'development'
+        ? {
+            filename: 'css/[name].css',
+            chunkFilename: 'css/[name].css'
+          }
+        : true
+    }
+  }))
+}
+```
+
+```js webpack 4
+// vue.config.js
+const process = require('node:process')
+
+module.exports = function () {
+  return import('@unocss/webpack').then(({ default: UnoCSS }) => ({
+    configureWebpack: {
+      plugins: [
+        UnoCSS({})
+      ]
+    },
+    chainWebpack(config) {
+      config.module.rule('vue').uses.delete('cache-loader')
+      config.module.rule('tsx').uses.delete('cache-loader')
+      config.merge({
+        cache: false
+      })
+    },
+    css: {
+      extract: process.env.NODE_ENV === 'development'
+        ? {
+            filename: '[name].css',
+            chunkFilename: '[name].[hash:9].css'
+          }
+        : true
+    }
+  }))
+}
+```
+
+</CodeGroup>

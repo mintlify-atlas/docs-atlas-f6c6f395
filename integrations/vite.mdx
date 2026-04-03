@@ -1,0 +1,331 @@
+---
+title: "Vite"
+description: "Integrate UnoCSS with Vite for instant atomic CSS in any framework."
+---
+
+The Vite plugin ships with the `unocss` package and supports HMR out of the box.
+
+## Installation
+
+<Steps>
+  <Step title="Install the package">
+    <CodeGroup>
+
+    ```bash npm
+    npm install -D unocss
+    ```
+
+    ```bash yarn
+    yarn add -D unocss
+    ```
+
+    ```bash pnpm
+    pnpm add -D unocss
+    ```
+
+    ```bash bun
+    bun add -D unocss
+    ```
+
+    </CodeGroup>
+  </Step>
+  <Step title="Add the plugin to vite.config.ts">
+    ```ts vite.config.ts
+    import UnoCSS from 'unocss/vite'
+    import { defineConfig } from 'vite'
+
+    export default defineConfig({
+      plugins: [
+        UnoCSS(),
+      ],
+    })
+    ```
+  </Step>
+  <Step title="Create a UnoCSS config file">
+    ```ts uno.config.ts
+    import { defineConfig } from 'unocss'
+
+    export default defineConfig({
+      // ...UnoCSS options
+    })
+    ```
+  </Step>
+  <Step title="Import the virtual stylesheet">
+    Add `virtual:uno.css` to your application entry point:
+
+    ```ts main.ts
+    import 'virtual:uno.css'
+    ```
+  </Step>
+</Steps>
+
+## Modes
+
+The Vite plugin supports several modes that change how generated CSS is delivered.
+
+### `global` (default)
+
+The default mode. Add the `virtual:uno.css` import to your entry point. This mode enables both build and dev plugins with HMR support. The generated CSS is injected as a global stylesheet into `index.html`.
+
+### `vue-scoped`
+
+Injects generated CSS into Vue SFC `<style scoped>` blocks for style isolation.
+
+### `shadow-dom`
+
+For Web Components using Shadow DOM, global stylesheets cannot style shadow tree content directly. This mode inlines the generated CSS into the Shadow DOM style block. Add `@unocss-placeholder` to each web component's style block:
+
+```ts
+const template = document.createElement('template')
+template.innerHTML = `
+<style>
+:host {...}
+@unocss-placeholder
+</style>
+<div class="m-1em">
+...
+</div>
+`
+```
+
+If you're using [Lit](https://lit.dev/):
+
+```ts
+@customElement('my-element')
+export class MyElement extends LitElement {
+  static styles = css`
+    :host {...}
+    @unocss-placeholder
+  `
+  // ...
+}
+```
+
+Don't forget to remove the `virtual:uno.css` import when using `shadow-dom` mode.
+
+```ts vite.config.ts
+import UnoCSS from 'unocss/vite'
+
+export default {
+  plugins: [
+    UnoCSS({
+      mode: 'shadow-dom',
+      /* more options */
+    }),
+  ],
+}
+```
+
+#### `::part` support
+
+You can use `::part` via `shortcuts` and the `part-[<part-name>]:<rule|shortcut>` rule from `preset-mini`. The plugin uses `nth-of-type` internally to avoid collisions between web components.
+
+```ts vite.config.ts
+import UnoCSS from 'unocss/vite'
+
+export default {
+  plugins: [
+    UnoCSS({
+      mode: 'shadow-dom',
+      shortcuts: [
+        { 'cool-blue': 'bg-blue-500 text-white' },
+        { 'cool-green': 'bg-green-500 text-black' },
+      ],
+    }),
+  ],
+}
+```
+
+### `per-module` (experimental)
+
+Generates a CSS sheet per module. Can be scoped.
+
+### `dist-chunk` (experimental)
+
+Generates a CSS sheet per code chunk at build time. Suitable for multi-page applications (MPA).
+
+## Frameworks
+
+### VanillaJS / TypeScript
+
+By default, `.js` and `.ts` files are excluded from extraction. To include them, configure the content sources explicitly. See the [configuration overview](/config/overview) for details on content source configuration.
+
+### React
+
+Place `UnoCSS()` before the React plugin:
+
+```ts vite.config.ts
+import React from '@vitejs/plugin-react'
+import UnoCSS from 'unocss/vite'
+
+export default {
+  plugins: [
+    UnoCSS(),
+    React(),
+  ],
+}
+```
+
+<Note>
+  If you're using `@unocss/preset-attributify`, remove `tsc` from the build script. When using `babel-plugin-react-compiler` or `@vitejs/plugin-react` with `@unocss/preset-attributify`, UnoCSS must appear before `@vitejs/plugin-react`.
+</Note>
+
+### Preact
+
+```ts vite.config.ts
+import Preact from '@preact/preset-vite'
+import UnoCSS from 'unocss/vite'
+
+export default {
+  plugins: [
+    UnoCSS(),
+    Preact(),
+  ],
+}
+```
+
+Or with `@prefresh/vite`:
+
+```ts vite.config.ts
+import Prefresh from '@prefresh/vite'
+import UnoCSS from 'unocss/vite'
+
+export default {
+  plugins: [
+    UnoCSS(),
+    Prefresh(),
+  ],
+}
+```
+
+### Svelte
+
+UnoCSS must appear before `@sveltejs/vite-plugin-svelte`. To support `class:foo` and `class:foo={bar}` syntax, add `extractorSvelte`:
+
+```ts vite.config.ts
+import { svelte } from '@sveltejs/vite-plugin-svelte'
+import extractorSvelte from '@unocss/extractor-svelte'
+import UnoCSS from 'unocss/vite'
+
+export default {
+  plugins: [
+    UnoCSS({
+      extractors: [
+        extractorSvelte(),
+      ],
+    }),
+    svelte(),
+  ],
+}
+```
+
+### SvelteKit
+
+```ts vite.config.ts
+import { sveltekit } from '@sveltejs/kit/vite'
+import extractorSvelte from '@unocss/extractor-svelte'
+import UnoCSS from 'unocss/vite'
+import { defineConfig } from 'vite'
+
+export default defineConfig({
+  plugins: [
+    UnoCSS({
+      extractors: [
+        extractorSvelte(),
+      ],
+    }),
+    sveltekit(),
+  ],
+})
+```
+
+### Solid
+
+Place `vite-plugin-solid` after UnoCSS:
+
+```ts vite.config.ts
+import UnoCSS from 'unocss/vite'
+import solidPlugin from 'vite-plugin-solid'
+
+export default {
+  plugins: [
+    UnoCSS(),
+    solidPlugin(),
+  ],
+}
+```
+
+### Elm
+
+Place `vite-plugin-elm` before UnoCSS:
+
+```ts vite.config.ts
+import UnoCSS from 'unocss/vite'
+import { defineConfig } from 'vite'
+import Elm from 'vite-plugin-elm'
+
+export default defineConfig({
+  plugins: [
+    Elm(),
+    UnoCSS(),
+  ],
+})
+```
+
+### Marko
+
+Place `@marko/vite` or `@marko/run/vite` before UnoCSS:
+
+```ts vite.config.ts
+import marko from '@marko/run/vite'
+import UnoCSS from 'unocss/vite'
+import { defineConfig } from 'vite'
+
+export default defineConfig({
+  plugins: [
+    marko(),
+    UnoCSS(),
+  ],
+})
+```
+
+## DevTools
+
+Because UnoCSS is on-demand, the browser DevTools won't know about classes you haven't used yet. To enable editing classes directly in DevTools, add the following to your entry:
+
+```ts
+import 'uno.css'
+import 'virtual:unocss-devtools'
+```
+
+<Warning>
+  The DevTools integration uses `MutationObserver` to detect class changes. This means dynamic class changes made by scripts are also detected and included in the stylesheet. This can cause differences between dev and production builds. Consider adding dynamic classes to the [safelist](https://github.com/unocss/unocss/issues/511) or setting up UI regression tests for production.
+</Warning>
+
+## Legacy plugin support
+
+If you're using `@vitejs/plugin-legacy` with `renderModernChunks: false`, pass the same option to UnoCSS:
+
+```ts vite.config.ts
+import legacy from '@vitejs/plugin-legacy'
+import vue from '@vitejs/plugin-vue'
+import { presetWind3 } from 'unocss'
+import Unocss from 'unocss/vite'
+import { defineConfig } from 'vite'
+
+export default defineConfig({
+  plugins: [
+    vue(),
+    Unocss({
+      presets: [presetWind3()],
+      legacy: {
+        renderModernChunks: false,
+      },
+    }),
+    legacy({
+      targets: ['defaults', 'not IE 11'],
+      renderModernChunks: false,
+    }),
+  ],
+})
+```

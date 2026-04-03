@@ -1,0 +1,97 @@
+---
+title: "Nuxt"
+description: "Use UnoCSS as a Nuxt module for atomic CSS in Nuxt 3 applications."
+---
+
+The official UnoCSS module for Nuxt: `@unocss/nuxt`.
+
+## Installation
+
+<Steps>
+  <Step title="Install the packages">
+    <CodeGroup>
+
+    ```bash npm
+    npm install -D unocss @unocss/nuxt
+    ```
+
+    ```bash yarn
+    yarn add -D unocss @unocss/nuxt
+    ```
+
+    ```bash pnpm
+    pnpm add -D unocss @unocss/nuxt
+    ```
+
+    ```bash bun
+    bun add -D unocss @unocss/nuxt
+    ```
+
+    </CodeGroup>
+  </Step>
+  <Step title="Add the module to nuxt.config.ts">
+    ```ts nuxt.config.ts
+    export default defineNuxtConfig({
+      modules: [
+        '@unocss/nuxt',
+      ],
+    })
+    ```
+  </Step>
+  <Step title="Create a UnoCSS config file">
+    ```ts uno.config.ts
+    import { defineConfig } from 'unocss'
+
+    export default defineConfig({
+      // ...UnoCSS options
+    })
+    ```
+  </Step>
+</Steps>
+
+The `uno.css` entry is automatically injected by the module — no manual import is needed.
+
+## Support status
+
+|               | Nuxt 2 | Nuxt Bridge | Nuxt 3 |
+| ------------- | :----: | :---------: | :----: |
+| Webpack dev   | ✅     | ✅          | 🚧     |
+| Webpack build | ✅     | ✅          | ✅     |
+| Vite dev      | —      | ✅          | ✅     |
+| Vite build    | —      | ✅          | ✅     |
+
+## Configuration
+
+The recommended approach is to use a dedicated `uno.config.ts` file for all UnoCSS configuration.
+
+### Nuxt layers
+
+Enable the `nuxtLayers` option to have UnoCSS automatically merge `uno.config` files from each Nuxt layer:
+
+```ts nuxt.config.ts
+export default defineNuxtConfig({
+  // ...
+  unocss: {
+    nuxtLayers: true,
+  },
+})
+```
+
+Then re-export the generated config in your root config file:
+
+```ts uno.config.ts
+import config from './.nuxt/uno.config.mjs'
+
+export default config
+```
+
+Or extend it with your own overrides:
+
+```ts uno.config.ts
+import { mergeConfigs } from '@unocss/core'
+import config from './.nuxt/uno.config.mjs'
+
+export default mergeConfigs([config, {
+  // your overrides
+}])
+```

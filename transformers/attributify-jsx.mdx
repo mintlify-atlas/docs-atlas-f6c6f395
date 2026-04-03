@@ -1,0 +1,180 @@
+---
+title: "Transformer Attributify JSX"
+description: "Use attributify mode in JSX and TSX components with UnoCSS."
+---
+
+The attributify JSX transformer enables [valueless attributify syntax](/presets/attributify#valueless-attributify) in `.jsx`, `.tsx`, and `.mdx` files. Without it, JSX treats attributes without a value as boolean `true`, which breaks UnoCSS's ability to detect them as utility classes.
+
+<CodeGroup>
+  ```jsx Source JSX
+  export function Component() {
+    return (
+      <div text-red text-center text-5xl animate-bounce>
+        unocss
+      </div>
+    )
+  }
+  ```
+
+  ```jsx Transformed output
+  export function Component() {
+    return (
+      <div text-red="" text-center="" text-5xl="" animate-bounce="">
+        unocss
+      </div>
+    )
+  }
+  ```
+</CodeGroup>
+
+<Note>
+  Without this transformer, JSX compilers interpret valueless attributes as `{true}` — for example, `text-red` becomes `text-red={true}`. This transformer rewrites them to empty strings so the attributify preset can detect them correctly.
+</Note>
+
+## How it differs from `preset-attributify`
+
+`preset-attributify` adds the scanning rules that detect attribute-style utilities. This transformer is a companion that handles the JSX-specific problem: JSX syntax does not allow valueless attributes the same way HTML does. The transformer runs before the JSX compiler and rewrites `attr` to `attr=""`, making the attribute visible to UnoCSS's scanner.
+
+You need **both** `presetAttributify()` and `transformerAttributifyJsx()` in a JSX/TSX project.
+
+## Installation
+
+<Steps>
+  <Step title="Install the package">
+    <CodeGroup>
+      ```bash pnpm
+      pnpm add -D @unocss/transformer-attributify-jsx
+      ```
+
+      ```bash yarn
+      yarn add -D @unocss/transformer-attributify-jsx
+      ```
+
+      ```bash npm
+      npm install -D @unocss/transformer-attributify-jsx
+      ```
+
+      ```bash bun
+      bun add -D @unocss/transformer-attributify-jsx
+      ```
+    </CodeGroup>
+
+    <Tip>
+      This transformer is included in the `unocss` package. If you already have `unocss` installed, you can import it directly:
+
+      ```ts
+      import { transformerAttributifyJsx } from 'unocss'
+      ```
+    </Tip>
+  </Step>
+
+  <Step title="Add to your UnoCSS config">
+    Add `presetAttributify()` to `presets` and `transformerAttributifyJsx()` to `transformers`:
+
+    ```ts uno.config.ts
+    import { defineConfig, presetAttributify } from 'unocss'
+    import transformerAttributifyJsx from '@unocss/transformer-attributify-jsx'
+
+    export default defineConfig({
+      // ...
+      presets: [
+        // ...
+        presetAttributify(),
+      ],
+      transformers: [
+        transformerAttributifyJsx(),
+      ],
+    })
+    ```
+  </Step>
+</Steps>
+
+## Usage in JSX/TSX
+
+Once configured, you can use utility names directly as attributes on any JSX element:
+
+```tsx
+export function Button() {
+  return (
+    <button
+      bg-blue-500
+      hover:bg-blue-600
+      text-white
+      font-bold
+      px-4
+      py-2
+      rounded
+    >
+      Click me
+    </button>
+  )
+}
+```
+
+The transformer processes `.jsx`, `.tsx`, and `.mdx` files by default. Other file types are ignored.
+
+## Caveats
+
+<Warning>
+  Attributify syntax in JSX has two restrictions that do not apply in HTML:
+
+  - Attribute names cannot end with `%`
+  - Attribute names cannot contain `[` or `]`
+</Warning>
+
+Use valued attributes for these cases instead:
+
+```jsx
+{/* These will not work as valueless attributes: */}
+{/* <div translate-x-100% /> */}
+{/* <div translate-x-[100px] /> */}
+
+{/* Use valued attributes instead: */}
+<div translate="x-100%" />
+<div translate="x-[100px]" />
+```
+
+## Blocklist
+
+To prevent specific attributes from being transformed, pass a `blocklist` of strings or regular expressions:
+
+```ts
+transformerAttributifyJsx({
+  blocklist: [/text-[a-zA-Z]*/, 'text-5xl']
+})
+```
+
+With this configuration, `text-red`, `text-center`, and `text-5xl` remain as valueless boolean attributes and are not rewritten to empty strings, while other utilities such as `animate-bounce` are still transformed:
+
+```jsx
+<div text-red text-center text-5xl animate-bounce>
+  unocss
+</div>
+```
+
+```html
+<!-- output -->
+<div text-red text-center text-5xl animate-bounce="">unocss</div>
+```
+
+## TypeScript support
+
+If TypeScript raises errors about unknown JSX attributes, extend the JSX intrinsic elements type. Add a declaration file to your project:
+
+```ts types/unocss.d.ts
+import type { AttributifyAttributes } from '@unocss/preset-attributify'
+
+declare module 'react' {
+  interface HTMLAttributes<T> extends AttributifyAttributes {}
+}
+```
+
+Adjust the module declaration to match your JSX runtime (`'react'`, `'preact'`, etc.).
+
+## Options
+
+| Option      | Type                          | Default                      | Description                                        |
+| ----------- | ----------------------------- | ---------------------------- | -------------------------------------------------- |
+| `blocklist` | `(string \| RegExp)[]`        | `[]`                         | Attributes to skip — left unchanged by transformer |
+| `include`   | `FilterPattern`               | `[/\.[jt]sx$/, /\.mdx$/]`   | Files to process                                   |
+| `exclude`   | `FilterPattern`               | `[]`                         | Files to exclude from processing                   |

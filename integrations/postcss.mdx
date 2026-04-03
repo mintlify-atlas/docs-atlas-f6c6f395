@@ -1,0 +1,205 @@
+---
+title: "PostCSS"
+description: "Use UnoCSS as a PostCSS plugin in any PostCSS-compatible workflow."
+---
+
+The PostCSS plugin for UnoCSS: `@unocss/postcss`. Supports `@apply`, `@screen`, and `theme()` directives.
+
+<Warning>
+  This package is in an experimental state and does not follow semver. Breaking changes may be introduced in patch versions.
+</Warning>
+
+## Installation
+
+<Steps>
+  <Step title="Install the packages">
+    <CodeGroup>
+
+    ```bash npm
+    npm install -D unocss @unocss/postcss
+    ```
+
+    ```bash yarn
+    yarn add -D unocss @unocss/postcss
+    ```
+
+    ```bash pnpm
+    pnpm add -D unocss @unocss/postcss
+    ```
+
+    ```bash bun
+    bun add -D unocss @unocss/postcss
+    ```
+
+    </CodeGroup>
+  </Step>
+  <Step title="Configure postcss.config.mjs">
+    ```js postcss.config.mjs
+    import UnoCSS from '@unocss/postcss'
+
+    export default {
+      plugins: [
+        UnoCSS(),
+      ],
+    }
+    ```
+  </Step>
+  <Step title="Configure uno.config.ts">
+    The PostCSS plugin uses a filesystem-based content scanner. Configure your file patterns in `uno.config.ts`:
+
+    ```ts uno.config.ts
+    import { defineConfig, presetWind3 } from 'unocss'
+
+    export default defineConfig({
+      content: {
+        filesystem: [
+          '**/*.{html,js,ts,jsx,tsx,vue,svelte,astro,marko}',
+        ],
+      },
+      presets: [
+        presetWind3(),
+      ],
+    })
+    ```
+  </Step>
+  <Step title="Add @unocss to your stylesheet">
+    ```css style.css
+    @unocss;
+    ```
+  </Step>
+</Steps>
+
+## Directives
+
+### `@unocss`
+
+The `@unocss` at-rule is a placeholder that gets replaced with the generated CSS.
+
+You can inject specific layers individually:
+
+```css style.css
+@unocss preflights;
+@unocss default;
+
+/*
+  Fallback layer. Always recommended to include.
+  Only layers not already injected above will be added here.
+*/
+@unocss;
+```
+
+To include all layers regardless of whether they've been previously injected, use `@unocss all`. This is useful when you want to include generated CSS in multiple files:
+
+```css
+@unocss all;
+```
+
+To exclude a specific layer, use the `!` prefix:
+
+```css
+@unocss !preflights, !<other-layer>;
+```
+
+### `@apply`
+
+Apply UnoCSS utilities inside custom CSS rules:
+
+```css
+.custom-div {
+  @apply text-center my-0 font-medium;
+}
+```
+
+Compiles to:
+
+```css
+.custom-div {
+  margin-top: 0rem;
+  margin-bottom: 0rem;
+  text-align: center;
+  font-weight: 500;
+}
+```
+
+### `@screen`
+
+Create media queries that reference breakpoints by name from `theme.breakpoints`:
+
+```css
+.grid {
+  @apply grid grid-cols-2;
+}
+@screen xs {
+  .grid {
+    @apply grid-cols-1;
+  }
+}
+@screen sm {
+  .grid {
+    @apply grid-cols-3;
+  }
+}
+```
+
+Compiles to:
+
+```css
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+@media (min-width: 320px) {
+  .grid {
+    grid-template-columns: repeat(1, minmax(0, 1fr));
+  }
+}
+@media (min-width: 640px) {
+  .grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+```
+
+#### Breakpoint variants
+
+`@screen` supports `lt` (less-than) and `at` (between) variants:
+
+**`@screen lt`** — generates a `max-width` media query:
+
+```css
+@screen lt-sm {
+  .grid {
+    @apply grid-cols-3;
+  }
+}
+/* becomes: @media (max-width: 639.9px) { ... } */
+```
+
+**`@screen at`** — generates a ranged `min-width` and `max-width` media query:
+
+```css
+@screen at-xs {
+  .grid {
+    @apply grid-cols-1;
+  }
+}
+/* becomes: @media (min-width: 320px) and (max-width: 639.9px) { ... } */
+```
+
+### `theme()`
+
+Access theme config values using dot notation:
+
+```css
+.btn-blue {
+  background-color: theme('colors.blue.500');
+}
+```
+
+Compiles to:
+
+```css
+.btn-blue {
+  background-color: #3b82f6;
+}
+```

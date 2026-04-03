@@ -1,0 +1,101 @@
+---
+title: "Editor Extensions"
+description: "VS Code, JetBrains, and other editor extensions for UnoCSS."
+---
+
+UnoCSS provides first-party editor tooling for VS Code and a community-maintained language server for other editors.
+
+## VS Code extension
+
+Install the official extension from the VS Code Marketplace:
+
+- Extension ID: **`antfu.unocss`**
+- [View on Marketplace](https://marketplace.visualstudio.com/items?itemName=antfu.unocss)
+
+### Features
+
+- **Decoration and hover preview** — matched utility class names are underlined and show a tooltip with the generated CSS when you hover over them.
+- **Color preview** — color utilities display a color swatch inline in the editor.
+- **Autocomplete** — suggestions appear as you type, powered by your UnoCSS configuration's autocomplete templates.
+- **Auto config loading** — the extension automatically finds your `uno.config.ts` (or equivalent) and reloads when it changes.
+- **Token count** — the status bar shows how many utilities are matched in the current file.
+
+### Commands
+
+| Command | Description |
+|---|---|
+| `unocss.reload` | Reload the UnoCSS configuration |
+| `unocss.insert-skip-annotation` | Insert `@unocss-skip` around the selected text to prevent extraction |
+
+### Settings
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `unocss.disable` | `boolean` | `false` | Disable the extension |
+| `unocss.root` | `array \| string` | — | Project root containing the UnoCSS config file |
+| `unocss.include` | `array \| string` | — | File paths to include for detection |
+| `unocss.exclude` | `array \| string` | — | File paths to exclude from detection |
+| `unocss.languageIds` | `array` | — | Additional language IDs to activate the extension for |
+| `unocss.underline` | `boolean` | `true` | Show underline decorations on matched class names |
+| `unocss.colorPreview` | `boolean` | `true` | Show inline color preview swatches |
+| `unocss.colorPreviewRadius` | `string` | `"50%"` | Border radius of color preview swatches |
+| `unocss.remToPxPreview` | `boolean` | `true` | Convert `rem` values to `px` in hover previews |
+| `unocss.remToPxRatio` | `number` | `16` | Base font size for `rem` to `px` conversion |
+| `unocss.selectionStyle` | `boolean` | `true` | Show decorations on selected class names |
+| `unocss.strictAnnotationMatch` | `boolean` | `false` | Only annotate class names in recognized class attribute positions |
+| `unocss.autocomplete.matchType` | `string` | `"prefix"` | Autocomplete matching strategy (`"prefix"` or `"fuzzy"`) |
+| `unocss.autocomplete.strict` | `boolean` | `false` | Only show autocomplete in recognized class attribute positions |
+| `unocss.autocomplete.maxItems` | `number` | `1000` | Maximum number of autocomplete suggestions to show |
+
+### Configuration
+
+For the best experience, use a dedicated `uno.config.ts` file at your project root. The extension searches upward from open files to find it.
+
+If the extension can find no config, it disables itself. When you have multiple projects open in a workspace, set `unocss.root` to help the extension locate the right config for each.
+
+### Icons preset integration
+
+If you use `@unocss/preset-icons`, install the [Iconify IntelliSense](https://marketplace.visualstudio.com/items?itemName=antfu.iconify) extension alongside the UnoCSS extension to get inline icon previews, hover information, and autocomplete for icon names.
+
+---
+
+## JetBrains IDEs
+
+A community plugin is available for JetBrains IDEs (WebStorm, IntelliJ IDEA, etc.) on the JetBrains Marketplace. Search for **UnoCSS** in the plugin marketplace within your IDE.
+
+---
+
+## Language server (other editors)
+
+`unocss-language-server` is a community-maintained LSP server that provides UnoCSS IDE features in any editor with LSP support, including Neovim, Emacs, and Helix.
+
+<Warning>
+  This is a community-maintained project, not officially maintained by the UnoCSS team. Report issues at [xna00/unocss-language-server](https://github.com/xna00/unocss-language-server).
+</Warning>
+
+### Installation
+
+```bash
+npm install -g unocss-language-server
+```
+
+### Features
+
+- Autocomplete for UnoCSS utility names
+- Hover documentation with generated CSS previews
+
+### Usage
+
+Start the server in stdio mode:
+
+```bash
+unocss-language-server --stdio
+```
+
+Then configure your editor's LSP client to connect to it. Refer to your editor's LSP documentation for the exact configuration format.
+
+---
+
+## Zed extension
+
+An unofficial UnoCSS extension for the [Zed editor](https://zed.dev) is available in the Zed extension registry. Search for **UnoCSS** inside Zed's extension manager.

@@ -1,0 +1,263 @@
+---
+title: "Configuration Overview"
+description: "Configure UnoCSS with rules, shortcuts, themes, variants, and presets."
+---
+
+UnoCSS is configured through a `uno.config.ts` file at the root of your project. Use the `defineConfig()` helper to get full TypeScript intellisense.
+
+```ts
+// uno.config.ts
+import { defineConfig } from 'unocss'
+
+export default defineConfig({
+  rules: [],
+  shortcuts: {},
+  theme: {},
+  variants: [],
+  presets: [],
+})
+```
+
+The `defineConfig()` helper accepts a `UserConfig` object and returns it unchanged — it exists purely for type inference.
+
+## Config options at a glance
+
+<CardGroup cols={2}>
+  <Card title="Rules" icon="list" href="/config/rules">
+    Define atomic CSS utilities with static strings or dynamic RegExp matchers.
+  </Card>
+  <Card title="Shortcuts" icon="bolt" href="/config/shortcuts">
+    Combine multiple utilities into reusable aliases, statically or dynamically.
+  </Card>
+  <Card title="Theme" icon="palette" href="/config/theme">
+    Share design tokens — colors, spacing, breakpoints — across all rules.
+  </Card>
+  <Card title="Variants" icon="layers" href="/config/variants">
+    Add prefixes like `hover:`, `dark:`, and `sm:` that transform selectors.
+  </Card>
+  <Card title="Presets" icon="package" href="/config/presets">
+    Bundle rules, variants, shortcuts, and theme into shareable presets.
+  </Card>
+  <Card title="Transformers" icon="wand" href="/transformers/variant-group">
+    Transform source code before extraction (e.g., attributify, tagged templates).
+  </Card>
+</CardGroup>
+
+## All configuration options
+
+### rules
+
+```ts
+rules?: Rule<Theme>[]
+```
+
+Rules that generate CSS utilities. Later entries have higher priority. Each rule is either a static `[string, CSSObject]` tuple or a dynamic `[RegExp, Function]` tuple.
+
+### shortcuts
+
+```ts
+shortcuts?: UserShortcuts<Theme>
+```
+
+Utility aliases that expand to one or more existing utilities. Later entries have higher priority.
+
+### theme
+
+```ts
+theme?: Theme
+```
+
+Shared design tokens available inside rules, variants, and shortcuts via the `context.theme` object. Deep-merged with themes provided by presets.
+
+### extendTheme
+
+```ts
+extendTheme?: Arrayable<ThemeExtender<Theme>>
+```
+
+Custom functions that mutate the already-merged theme object. Can also return a new theme to fully replace the original.
+
+### variants
+
+```ts
+variants?: Variant<Theme>[]
+```
+
+Variants pre-process selectors before rules are matched. They can rewrite the matcher string and modify the generated selector or CSS body.
+
+### presets
+
+```ts
+presets?: (PresetOrFactoryAwaitable<Theme> | PresetOrFactoryAwaitable<Theme>[])[]
+```
+
+Predefined configurations bundled as reusable units. Presets can carry their own rules, shortcuts, theme, variants, preflights, and more.
+
+### transformers
+
+```ts
+transformers?: SourceCodeTransformer[]
+```
+
+Source code transformers run before extraction. Use them to support non-standard class name conventions.
+
+### extractors
+
+```ts
+extractors?: Extractor[]
+```
+
+Extractors scan your source files and return a list of candidate class names. The default extractor splits on whitespace and quotes.
+
+### extractorDefault
+
+```ts
+extractorDefault?: Extractor | null | false
+```
+
+Override or disable the built-in whitespace-splitting extractor. Only one default extractor is active at a time; later definitions replace earlier ones. Pass `null` or `false` to disable entirely.
+
+### preflights
+
+```ts
+preflights?: Preflight<Theme>[]
+```
+
+Raw CSS injected before generated utilities. The resolved `theme` is available inside `getCSS`.
+
+### layers
+
+```ts
+layers?: Record<string, number>
+```
+
+Explicit ordering for CSS layers. Layers without a number sort alphabetically. The default layer has order `0`.
+
+### outputToCssLayers
+
+```ts
+outputToCssLayers?: boolean | OutputCssLayersOptions
+```
+
+Emit UnoCSS layers as [CSS Cascade Layers](https://developer.mozilla.org/en-US/docs/Web/CSS/@layer). Set to `true` to use layer names as-is, or pass an options object to customise names.
+
+### safelist
+
+```ts
+safelist?: (string | ((context: SafeListContext<Theme>) => Arrayable<string>))[]
+```
+
+Utilities that are always included in the generated CSS, even if not found in source. Accepts static strings or functions that receive the resolved context.
+
+### blocklist
+
+```ts
+blocklist?: BlocklistRule[]
+```
+
+Selectors to exclude from generation. Useful for narrowing down false-positive matches in large design systems.
+
+### autocomplete
+
+```ts
+autocomplete?: {
+  templates?: Arrayable<AutoCompleteFunction | AutoCompleteTemplate>
+  extractors?: Arrayable<AutoCompleteExtractor>
+  shorthands?: Record<string, string | string[]>
+}
+```
+
+Custom autocomplete suggestions for the VS Code extension and the online playground.
+
+### content
+
+Options for which source files to scan for utility usage. The three sub-sources are merged together.
+
+#### content.filesystem
+
+```ts
+filesystem?: string[]
+```
+
+Glob patterns to extract from the file system in addition to the build pipeline. Files are watched in dev mode and trigger HMR.
+
+#### content.inline
+
+```ts
+inline?: (string | { code: string; id?: string } | (() => Awaitable<string | { code: string; id?: string }>))[]
+```
+
+Plain text strings (or functions returning them) to treat as additional source code.
+
+#### content.pipeline
+
+```ts
+pipeline?: false | {
+  include?: FilterPattern
+  exclude?: FilterPattern
+}
+```
+
+Controls which files the build-tool integration (Vite, Webpack) sends through the extraction pipeline.
+
+- **include** — defaults to `.vue`, `.svelte`, `.jsx/.tsx`, `.mdx`, `.astro`, `.html`, and similar.
+- **exclude** — defaults to CSS-related extensions; `node_modules` and `dist` are also excluded.
+
+Set `pipeline: false` to disable pipeline extraction entirely.
+
+### shortcutsLayer
+
+```ts
+shortcutsLayer?: string   // default: 'shortcuts'
+```
+
+The CSS layer that shortcuts are emitted into.
+
+### preprocess / postprocess
+
+```ts
+preprocess?: Arrayable<Preprocessor>
+postprocess?: Arrayable<Postprocessor>
+```
+
+Hooks that run before and after utility generation. `preprocess` can discard a token by returning a falsy value; `postprocess` receives the fully constructed `UtilObject`.
+
+### configResolved
+
+```ts
+configResolved?: (config: ResolvedConfig) => void
+```
+
+Hook called after the configuration is fully resolved (all presets merged). Preset `configResolved` hooks run first, then the user config hook.
+
+## How config is resolved
+
+<Steps>
+  <Step title="Load presets">
+    Presets listed in `presets[]` are resolved in order. Each preset's rules,
+    shortcuts, theme, variants, preflights, and layers are collected.
+  </Step>
+  <Step title="Deep-merge theme">
+    The theme objects from all presets are deep-merged. The user's `theme` is
+    merged last, so it takes precedence over preset defaults.
+  </Step>
+  <Step title="Run extendTheme">
+    `extendTheme` functions receive the merged theme and can mutate it or return
+    a replacement. Preset `extendTheme` functions run before the user's.
+  </Step>
+  <Step title="Concatenate arrays">
+    Rules, shortcuts, variants, preflights, extractors, and transformers from
+    all presets are concatenated. User-level entries are appended last and
+    therefore have the highest priority.
+  </Step>
+  <Step title="Call configResolved">
+    `configResolved` hooks are called with the final `ResolvedConfig` object,
+    allowing last-minute mutations.
+  </Step>
+</Steps>
+
+<Note>
+  Rules and shortcuts defined later always have higher priority. If you need to
+  override a preset rule, define your rule after the preset in `rules[]` or add
+  it at the user-config level.
+</Note>

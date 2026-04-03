@@ -1,0 +1,203 @@
+---
+title: "Presets"
+description: "Use and create reusable UnoCSS presets for sharable configurations."
+---
+
+Presets are self-contained configuration bundles. They can include rules, shortcuts, theme tokens, variants, preflights, layers, transformers, and extractors — anything you would put in your root `uno.config.ts`. Sharing a preset is the idiomatic way to distribute a UnoCSS design system or a set of utility conventions.
+
+## Using presets
+
+Pass preset instances to the `presets` array in `defineConfig`.
+
+```ts
+// uno.config.ts
+import { defineConfig, presetWind3 } from 'unocss'
+import presetIcons from '@unocss/preset-icons'
+
+export default defineConfig({
+  presets: [
+    presetWind3(),
+    presetIcons({ scale: 1.2 }),
+  ],
+})
+```
+
+Presets are merged in order. Later presets have higher priority for rules and shortcuts, and their theme is merged on top of earlier presets' theme. The user config is always applied last and therefore has the highest priority.
+
+## Creating a preset
+
+Use `definePreset` to author a preset with full type safety. Export a factory function so consumers can pass options.
+
+```ts
+// my-preset.ts
+import { definePreset } from 'unocss'
+
+interface MyPresetOptions {
+  prefix?: string
+}
+
+export default definePreset((options: MyPresetOptions = {}) => {
+  const prefix = options.prefix ?? ''
+
+  return {
+    name: 'my-preset',
+
+    rules: [
+      [`${prefix}card`, { 'border-radius': '0.5rem', padding: '1rem' }],
+      [new RegExp(`^${prefix}gap-(\\d+)$`), ([, d]) => ({ gap: `${Number(d) / 4}rem` })],
+    ],
+
+    shortcuts: {
+      [`${prefix}btn`]: 'py-2 px-4 rounded font-semibold',
+    },
+
+    theme: {
+      colors: {
+        brand: '#0080ff',
+      },
+    },
+
+    variants: [
+      (matcher) => {
+        if (!matcher.startsWith(`${prefix}active:`))
+          return matcher
+        return {
+          matcher: matcher.slice(`${prefix}active:`.length),
+          selector: s => `${s}:active`,
+        }
+      },
+    ],
+  }
+})
+```
+
+Consumers install it like any other preset:
+
+```ts
+// uno.config.ts
+import { defineConfig } from 'unocss'
+import myPreset from './my-preset'
+
+export default defineConfig({
+  presets: [
+    myPreset({ prefix: 'my-' }),
+  ],
+})
+```
+
+## The `Preset` type
+
+A preset extends `ConfigBase` (the same shape as `UserConfig`) with a few additional fields:
+
+```ts
+interface Preset<Theme extends object = object> extends ConfigBase<Theme> {
+  /** Required unique identifier */
+  name: string
+
+  /** Run before ('pre') or after ('post') other presets */
+  enforce?: 'pre' | 'post'
+
+  /** Apply a prefix to all utilities and shortcuts in this preset */
+  prefix?: string | string[]
+
+  /** Assign all utilities and shortcuts in this preset to a layer */
+  layer?: string
+
+  /** Preset-specific options exposed to tooling (e.g. IDE plugins) */
+  options?: PresetOptions
+
+  /** Cross-preset communication endpoint */
+  api?: any
+
+  /** Arbitrary metadata */
+  meta?: Record<string, any>
+}
+```
+
+### `enforce`
+
+Use `enforce: 'pre'` to guarantee your preset runs before others (useful for base resets), or `enforce: 'post'` to run after all other presets (useful for overrides).
+
+```ts
+return {
+  name: 'my-base-preset',
+  enforce: 'pre',
+  preflights: [
+    { getCSS: () => '*, *::before, *::after { box-sizing: border-box; }' },
+  ],
+}
+```
+
+### `prefix`
+
+Scope all utilities and shortcuts in a preset to a prefix, avoiding naming collisions with other presets.
+
+```ts
+return {
+  name: 'my-preset',
+  prefix: 'my-',
+  rules: [
+    ['card', { padding: '1rem' }], // accessed as "my-card"
+  ],
+}
+```
+
+## What a preset can contain
+
+A preset can include any combination of the following `ConfigBase` fields:
+
+<ParamField body="rules" type="Rule[]">
+  Atomic CSS utility definitions, both static and dynamic.
+</ParamField>
+
+<ParamField body="shortcuts" type="UserShortcuts">
+  Utility aliases, static or dynamic.
+</ParamField>
+
+<ParamField body="theme" type="Theme">
+  Design tokens deep-merged with other presets and the user config.
+</ParamField>
+
+<ParamField body="extendTheme" type="ThemeExtender | ThemeExtender[]">
+  Functions that mutate or replace the merged theme.
+</ParamField>
+
+<ParamField body="variants" type="Variant[]">
+  Selector transformers (pseudo-classes, media queries, etc.).
+</ParamField>
+
+<ParamField body="preflights" type="Preflight[]">
+  Raw CSS injected before generated utilities.
+</ParamField>
+
+<ParamField body="layers" type="Record<string, number>">
+  CSS layer order declarations.
+</ParamField>
+
+<ParamField body="transformers" type="SourceCodeTransformer[]">
+  Source-code transformers (e.g. attributify, tagged-template support).
+</ParamField>
+
+<ParamField body="extractors" type="Extractor[]">
+  Custom extractors for non-standard source formats.
+</ParamField>
+
+<ParamField body="autocomplete" type="object">
+  Templates, shorthands, and extractors for IDE autocomplete.
+</ParamField>
+
+## Preset ordering and priority
+
+The order of entries in `presets[]` matters:
+
+- **Rules and shortcuts**: later entries win (same as user-level rules).
+- **Theme**: deep-merged left to right; later presets' values override earlier ones.
+- **Variants**: concatenated in order; all variants from all presets are active.
+- **Preflights**: emitted in order.
+- **`enforce: 'pre'`** presets are sorted before non-enforced presets; **`enforce: 'post'`** presets are sorted after.
+
+The user config's `rules`, `shortcuts`, `theme`, and `variants` are always applied after all presets.
+
+<Tip>
+  Browse the [official presets](/presets/overview) for real-world examples of preset authoring patterns.
+</Tip>

@@ -1,0 +1,292 @@
+---
+title: "Preset Typography"
+description: "Beautiful typographic defaults for HTML content with UnoCSS."
+---
+
+`@unocss/preset-typography` provides a set of `prose` classes you can use to add typographic defaults to vanilla HTML — useful for rendering Markdown content, CMS output, or any HTML you don't control directly.
+
+## Installation
+
+<Steps>
+  <Step title="Install the package">
+    <CodeGroup>
+      ```bash pnpm
+      pnpm add -D @unocss/preset-typography
+      ```
+      ```bash yarn
+      yarn add -D @unocss/preset-typography
+      ```
+      ```bash npm
+      npm install -D @unocss/preset-typography
+      ```
+      ```bash bun
+      bun add -D @unocss/preset-typography
+      ```
+    </CodeGroup>
+  </Step>
+  <Step title="Add to your config">
+    `preset-typography` requires `preset-wind3` (or `preset-wind4`) to be present for color utilities.
+
+    ```ts
+    import {
+      defineConfig,
+      presetAttributify,
+      presetTypography,
+      presetWind3,
+    } from 'unocss'
+
+    export default defineConfig({
+      presets: [
+        presetWind3(),          // required
+        presetAttributify(),    // required if using attributify mode
+        presetTypography(),
+      ],
+    })
+    ```
+  </Step>
+</Steps>
+
+<Tip>
+This preset is also exported from the `unocss` package:
+
+```ts
+import { presetTypography } from 'unocss'
+```
+</Tip>
+
+## Usage
+
+Apply the `prose` class to a container element to style all its HTML descendants:
+
+<CodeGroup>
+  ```html Classes
+  <article class="text-base prose dark:prose-invert xl:text-xl">
+    {{ markdown }}
+    <p class="not-prose">Some text</p>
+  </article>
+  ```
+
+  ```html Attributes (attributify mode)
+  <article text-base prose="~ dark:invert" xl="text-xl">
+    {{ markdown }}
+    <p class="not-prose">Some text</p>
+  </article>
+  ```
+</CodeGroup>
+
+<Warning>
+`not-prose` can only be used as a class, not as an attributify attribute. This is because it works via CSS selector, not as a scanned token.
+</Warning>
+
+## Prose sizes
+
+Five built-in size variants scale all typographic elements proportionally:
+
+```html
+<article class="prose prose-sm">Small typography</article>
+<article class="prose prose-base">Base typography (default)</article>
+<article class="prose prose-lg">Large typography</article>
+<article class="prose prose-xl">Extra large typography</article>
+<article class="prose prose-2xl">2X large typography</article>
+```
+
+Combine with responsive prefixes:
+
+```html
+<article class="prose prose-sm md:prose-base lg:prose-lg xl:prose-xl">
+  Responsive typography that scales with screen size
+</article>
+```
+
+## Prose colors
+
+Apply a color theme with `prose-{colorName}`. The default color is `prose-gray`. Color utilities style headings, links, blockquotes, and code blocks.
+
+```html
+<article class="prose prose-gray">Gray themed typography</article>
+<article class="prose prose-blue">Blue themed typography</article>
+<article class="prose prose-green">Green themed typography</article>
+<article class="prose prose-purple">Purple themed typography</article>
+```
+
+Colors fall into two categories:
+
+| Natural colors | Accent colors |
+|---|---|
+| Affect global typography (headings, body, borders) | Only change link color |
+| `prose-slate`, `prose-gray`, `prose-zinc`, `prose-neutral`, `prose-stone` | `prose-rose`, `prose-red`, `prose-orange`, `prose-amber`, `prose-yellow`, `prose-lime`, `prose-green`, `prose-emerald`, `prose-teal`, `prose-cyan`, `prose-sky`, `prose-blue`, `prose-indigo`, `prose-violet`, `prose-purple`, `prose-fuchsia`, `prose-pink` |
+
+<Note>
+Color utilities require a color range from `50` to `950` in the theme, which is why `preset-wind3` or `preset-wind4` is required.
+</Note>
+
+## Dark mode
+
+Add `prose-invert` to invert the prose color scheme for dark backgrounds:
+
+```html
+<article class="prose dark:prose-invert">
+  Content styled for light mode, inverted for dark mode
+</article>
+```
+
+You handle background color separately — the preset only manages text and element colors.
+
+## Excluding elements with `not-prose`
+
+Apply `not-prose` to a child element to opt out of prose styles for that element:
+
+```html
+<article class="prose">
+  <p>This paragraph is styled by prose.</p>
+  <table class="not-prose">This table is not styled by prose.</table>
+</article>
+```
+
+## Customization
+
+### Custom selector name
+
+Change the prose class name via `selectorName`:
+
+```ts
+presetTypography({
+  selectorName: 'markdown',
+  // now use: `markdown`, `markdown-gray`, `not-markdown`
+})
+```
+
+### Extending styles with `cssExtend`
+
+Override or extend built-in prose styles with CSS declarations. Conflicting values override; non-conflicting values merge:
+
+```ts
+presetTypography({
+  cssExtend: {
+    'code': {
+      color: '#8b5cf6',
+    },
+    'a:hover': {
+      color: '#f43f5e',
+    },
+    'a:visited': {
+      color: '#14b8a6',
+    },
+  },
+})
+```
+
+`cssExtend` also accepts a function that receives the current theme:
+
+```ts
+presetTypography({
+  cssExtend: (theme) => ({
+    'a': {
+      color: theme.colors?.blue?.[600],
+    },
+  }),
+})
+```
+
+### Scoped importance with `important`
+
+Mark all prose utilities with `!important`, or scope them under an ID selector:
+
+```ts
+presetTypography({
+  important: '#article-body',
+})
+```
+
+### Color scheme
+
+Customize the light/dark color values per typographic element with `colorScheme`. Each key maps to a `[lightShade, darkShade]` pair:
+
+```ts
+presetTypography({
+  colorScheme: {
+    body: [700, 300],
+    headings: [900, 'white'],
+    links: [900, 'white'],
+    // ...
+  }
+})
+```
+
+### Size scheme
+
+Customize CSS properties per typographic element at specific sizes with `sizeScheme`:
+
+```ts
+presetTypography({
+  sizeScheme: {
+    sm: {
+      h1: { 'font-size': '1.5rem' },
+      p: { 'font-size': '0.875rem' },
+    },
+    lg: {
+      h1: { 'font-size': '2.5rem' },
+      p: { 'font-size': '1.125rem' },
+    },
+  }
+})
+```
+
+### CSS variable prefix
+
+Control the naming of internal CSS custom properties:
+
+- **Type:** `string`
+- **Default:** `'--un-prose'`
+
+```ts
+presetTypography({
+  cssVarPrefix: '--my-prose',
+})
+```
+
+### Compatibility options
+
+Some pseudo-classes used internally (`is()`, `where()`, `not()`) are not universally supported. Disable them if needed:
+
+```ts
+presetTypography({
+  compatibility: {
+    noColonWhere: true,
+    noColonIs: true,
+    noColonNot: true,
+  }
+})
+```
+
+<Warning>
+Enabling `noColonNot` or `noColonWhere` makes `not-prose` unavailable. Enabling `noColonIs` causes incorrect behavior in attributify mode.
+</Warning>
+
+## Full configuration example
+
+```ts
+import { presetTypography } from '@unocss/preset-typography'
+import { defineConfig, presetAttributify, presetWind3 } from 'unocss'
+
+export default defineConfig({
+  presets: [
+    presetAttributify(),
+    presetWind3(),
+    presetTypography({
+      selectorName: 'markdown',
+      cssExtend: {
+        'code': {
+          color: '#8b5cf6',
+        },
+        'a:hover': {
+          color: '#f43f5e',
+        },
+        'a:visited': {
+          color: '#14b8a6',
+        },
+      },
+    }),
+  ],
+})
+```

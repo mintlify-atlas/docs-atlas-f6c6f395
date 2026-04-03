@@ -1,0 +1,166 @@
+---
+title: "CLI"
+description: "Generate CSS from the command line using the UnoCSS CLI."
+---
+
+The command line interface for UnoCSS: `@unocss/cli`. Use it in any project where a build-tool plugin isn't available — static sites, server-rendered templates, or scripted workflows.
+
+## Installation
+
+The CLI ships with the `unocss` package:
+
+<CodeGroup>
+
+```bash npm
+npm install -D unocss
+```
+
+```bash yarn
+yarn add -D unocss
+```
+
+```bash pnpm
+pnpm add -D unocss
+```
+
+```bash bun
+bun add -D unocss
+```
+
+</CodeGroup>
+
+You can also install the standalone package:
+
+<CodeGroup>
+
+```bash npm
+npm install -D @unocss/cli
+```
+
+```bash yarn
+yarn add -D @unocss/cli
+```
+
+```bash pnpm
+pnpm add -D @unocss/cli
+```
+
+```bash bun
+bun add -D @unocss/cli
+```
+
+</CodeGroup>
+
+<Note>
+  If the `unocss` binary isn't found (for example with pnpm and only the `unocss` package installed), install `@unocss/cli` as the standalone package.
+</Note>
+
+## Usage
+
+Pass one or more glob patterns to match the source files you want to scan:
+
+```bash
+unocss "site/snippets/**/*.php" "site/templates/**/*.php"
+```
+
+The generated `uno.css` file is written to the current working directory by default.
+
+Example `package.json` scripts:
+
+```json package.json
+{
+  "scripts": {
+    "dev": "unocss \"site/{snippets,templates}/**/*.php\" --watch",
+    "build": "unocss \"site/{snippets,templates}/**/*.php\""
+  },
+  "devDependencies": {
+    "@unocss/cli": "latest"
+  }
+}
+```
+
+<Note>
+  Escape glob patterns in npm scripts to prevent the shell from expanding them before they reach the CLI.
+</Note>
+
+## Common flags
+
+| Flag | Description |
+| --- | --- |
+| `-o, --out-file <file>` | Output filename. Defaults to `uno.css` in the current working directory. |
+| `-w, --watch` | Watch files for changes and rebuild automatically. |
+| `-c, --config [file]` | Path to a config file. |
+| `-m, --minify` | Minify the generated CSS. |
+| `--stdout` | Write CSS to STDOUT instead of a file. Disables `--watch` and `--out-file`. |
+| `--preflights` | Enable preflight styles. |
+| `--rewrite` | Update source files with transformed utilities. |
+| `--split-css [mode]` | Control CSS file output: `true`, `false`, `multi`, or `single`. |
+| `--preset [name]` | Set the default preset (`wind3` or `wind4`) when no config file is present. |
+| `--debug` | Enable debug mode. |
+| `-v, --version` | Display the current version. |
+| `-h, --help` | Display available options. |
+
+## Watch mode
+
+Add `--watch` (or `-w`) to rebuild on file changes during development:
+
+```bash
+unocss "site/{snippets,templates}/**/*.php" --watch
+```
+
+## Configuration file
+
+Create a `uno.config.ts` or `uno.config.js` at the root of your project to configure UnoCSS. The config file supports multiple entry points via the `cli.entry` option:
+
+```ts uno.config.ts
+import { defineConfig } from 'unocss'
+
+export default defineConfig({
+  cli: {
+    entry: {}, // CliEntryItem | CliEntryItem[]
+  },
+  // ...
+})
+```
+
+Each `CliEntryItem` accepts:
+
+| Property | Type | Default | Description |
+| --- | --- | --- | --- |
+| `patterns` | `string[]` | — | Glob patterns to match source files. |
+| `outFile` | `string` | — | Output filename for the generated CSS. |
+| `rewrite` | `boolean` | `false` | Overwrite source files with transformed content instead of writing a new file. |
+| `splitCss` | `boolean \| 'multi' \| 'single'` | `true` | Control how scanned CSS files are output. |
+
+## Default preset
+
+<Warning>
+  Starting from `v66.6.0`, the CLI no longer provides a default preset. You must explicitly set `--preset wind3` or `--preset wind4`, or configure a preset in `uno.config.ts`. This flag is ignored when a config file is present.
+</Warning>
+
+```bash
+unocss "src/**/*.vue" --preset wind4
+```
+
+## Rewriting source files
+
+Use `--rewrite` to apply transformers (such as [Variant Groups](/transformers/variant-group) or [Compile Class](/transformers/compile-class)) directly to your source files:
+
+```bash
+unocss "src/**/*.vue" --rewrite
+```
+
+## CSS splitting
+
+When CSS files are included in your patterns, use `--split-css` to control how they are output:
+
+| Value | Behavior |
+| --- | --- |
+| `false` | Do not output scanned CSS files. |
+| `true` | Transform and output scanned CSS file contents to `outFile`. |
+| `multi` | Output each CSS file separately with the format `${originFile}-[hash].css`. |
+| `single` | Merge all CSS files into one file named `outFile-merged.css`. |
+
+```bash
+unocss "src/**/*.vue" --split-css multi
+```

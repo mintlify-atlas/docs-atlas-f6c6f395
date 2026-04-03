@@ -1,0 +1,147 @@
+---
+title: "Transformer Compile Class"
+description: "Combine multiple UnoCSS utility classes into a single compiled class at build time."
+---
+
+The compile-class transformer synthesizes groups of utility classes into a single hashed class name at build time. Instead of shipping long lists of utility classes in your HTML, the transformer replaces marked class strings with short, generated class names and emits the corresponding CSS.
+
+This is inspired by [Windi CSS compilation mode](https://windicss.org/posts/modes.html#compilation-mode).
+
+```html
+<!-- source HTML with :uno: marker -->
+<div class=":uno: text-center sm:text-left">
+  <div class=":uno: text-sm font-bold hover:text-red" />
+</div>
+```
+
+```html
+<!-- compiled output -->
+<div class="uno-qlmcrp">
+  <div class="uno-0qw2gr" />
+</div>
+```
+
+## Installation
+
+<Steps>
+  <Step title="Install the package">
+    <CodeGroup>
+      ```bash pnpm
+      pnpm add -D @unocss/transformer-compile-class
+      ```
+
+      ```bash yarn
+      yarn add -D @unocss/transformer-compile-class
+      ```
+
+      ```bash npm
+      npm install -D @unocss/transformer-compile-class
+      ```
+
+      ```bash bun
+      bun add -D @unocss/transformer-compile-class
+      ```
+    </CodeGroup>
+
+    <Tip>
+      This transformer is included in the `unocss` package. If you already have `unocss` installed, you can import it directly:
+
+      ```ts
+      import { transformerCompileClass } from 'unocss'
+      ```
+    </Tip>
+  </Step>
+
+  <Step title="Add to your UnoCSS config">
+    ```ts uno.config.ts
+    import transformerCompileClass from '@unocss/transformer-compile-class'
+    import { defineConfig } from 'unocss'
+
+    export default defineConfig({
+      // ...
+      transformers: [
+        transformerCompileClass(),
+      ],
+    })
+    ```
+  </Step>
+</Steps>
+
+## Usage
+
+Add the `:uno:` marker at the beginning of a class string to mark it for compilation. The transformer replaces the entire marked string with a single generated class.
+
+<CodeGroup>
+  ```html Before
+  <div class=":uno: text-center sm:text-left">
+    <div class=":uno: text-sm font-bold hover:text-red" />
+  </div>
+  ```
+
+  ```html After (HTML)
+  <div class="uno-qlmcrp">
+    <div class="uno-0qw2gr" />
+  </div>
+  ```
+
+  ```css After (generated CSS)
+  .uno-qlmcrp {
+    text-align: center;
+  }
+  .uno-0qw2gr {
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    font-weight: 700;
+  }
+  .uno-0qw2gr:hover {
+    --un-text-opacity: 1;
+    color: rgb(248 113 113 / var(--un-text-opacity));
+  }
+  @media (min-width: 640px) {
+    .uno-qlmcrp {
+      text-align: left;
+    }
+  }
+  ```
+</CodeGroup>
+
+The generated class name is `uno-` followed by a 6-character hash derived from the utility class list. Classes that UnoCSS does not recognise are left in the output as-is (controlled by the `keepUnknown` option).
+
+## Options
+
+| Option        | Type                        | Default    | Description                                                               |
+| ------------- | --------------------------- | ---------- | ------------------------------------------------------------------------- |
+| `trigger`     | `string \| RegExp`          | `:uno:`    | String or regex that marks a class string for compilation                 |
+| `classPrefix` | `string`                    | `'uno-'`   | Prefix prepended to the generated class name                              |
+| `hashFn`      | `(str: string) => string`   | built-in   | Custom hash function for generating class name suffixes                   |
+| `alwaysHash`  | `boolean`                   | `false`    | Append a hash even when an explicit name is provided via the trigger      |
+| `keepUnknown` | `boolean`                   | `true`     | Leave unrecognised utilities in the class attribute instead of discarding |
+| `layer`       | `string`                    | —          | Assign generated rules to a specific UnoCSS layer                        |
+
+### Custom class names
+
+The default trigger regex supports an optional name segment. Use `:uno-MYNAME:` to give the compiled class a predictable name instead of a hash:
+
+```html
+<div class=":uno-card: text-center font-bold text-white bg-blue-500" />
+<!-- compiles to: <div class="uno-card"> -->
+```
+
+<Note>
+  If you use an explicit name and `alwaysHash` is `false`, two different class strings with the same name will cause an error. Set `alwaysHash: true` or use unique names to avoid conflicts.
+</Note>
+
+## ESLint integration
+
+An ESLint rule is available to enforce the compile-class transformer across your project:
+
+```json .eslintrc.json
+{
+  "plugins": ["@unocss"],
+  "rules": {
+    "@unocss/enforce-class-compile": "warn"
+  }
+}
+```
+
+See the [ESLint integration docs](/reference/eslint) for setup instructions.

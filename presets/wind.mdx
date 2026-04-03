@@ -1,0 +1,270 @@
+---
+title: "Preset Wind"
+description: "Tailwind CSS and Windi CSS compatible utilities for UnoCSS."
+---
+
+`@unocss/preset-wind3` is the primary UnoCSS preset. It provides a comprehensive set of utility classes compatible with [Tailwind CSS v3](https://tailwindcss.com/) and [Windi CSS](https://windicss.org/), making it straightforward to migrate existing projects or build new ones with familiar class names.
+
+This preset inherits from [`@unocss/preset-mini`](/presets/mini) and extends it with layout, animation, gradient, and container utilities.
+
+<Note>
+`@unocss/preset-wind` and `@unocss/preset-uno` are deprecated and renamed to `@unocss/preset-wind3`.
+</Note>
+
+## Installation
+
+<Steps>
+  <Step title="Install the package">
+    <CodeGroup>
+      ```bash pnpm
+      pnpm add -D @unocss/preset-wind3
+      ```
+      ```bash yarn
+      yarn add -D @unocss/preset-wind3
+      ```
+      ```bash npm
+      npm install -D @unocss/preset-wind3
+      ```
+      ```bash bun
+      bun add -D @unocss/preset-wind3
+      ```
+    </CodeGroup>
+  </Step>
+  <Step title="Add to your config">
+    ```ts
+    import presetWind3 from '@unocss/preset-wind3'
+    import { defineConfig } from 'unocss'
+
+    export default defineConfig({
+      presets: [
+        presetWind3(),
+      ],
+    })
+    ```
+  </Step>
+</Steps>
+
+<Tip>
+This preset is included in the `unocss` package — you can import it from there directly:
+
+```ts
+import { presetWind3 } from 'unocss'
+```
+</Tip>
+
+## Rules
+
+The primary goal of this preset is compatibility with [Tailwind CSS](https://tailwindcss.com/) and [Windi CSS](https://windicss.org/). Complete compatibility is not guaranteed for every edge case — refer to the Tailwind [documentation](https://tailwindcss.com/docs) for detailed API reference.
+
+The preset covers the following utility categories:
+
+| Category | Example utilities |
+|---|---|
+| Layout | `block`, `flex`, `grid`, `container`, `overflow-hidden` |
+| Flexbox | `flex-row`, `items-center`, `justify-between`, `flex-1` |
+| Grid | `grid-cols-3`, `col-span-2`, `gap-4` |
+| Spacing | `p-4`, `m-auto`, `px-2`, `mt-8` |
+| Sizing | `w-full`, `h-screen`, `max-w-lg`, `min-h-0` |
+| Typography | `text-lg`, `font-bold`, `leading-6`, `tracking-wide` |
+| Colors | `text-blue-500`, `bg-red-100`, `border-gray-200` |
+| Borders | `border`, `rounded-lg`, `border-dashed` |
+| Effects | `shadow-md`, `opacity-50`, `ring-2` |
+| Animations | `animate-spin`, `animate-bounce`, `animate-pulse` |
+| Transitions | `transition`, `duration-300`, `ease-in-out` |
+
+## Features
+
+### Dark mode
+
+By default, this preset generates class-based dark mode using the `dark:` variant:
+
+```html
+<div class="dark:bg-red:10" />
+```
+
+This generates:
+
+```css
+.dark .dark\:bg-red\:10 {
+  background-color: rgb(248 113 113 / 0.1);
+}
+```
+
+#### Media query dark mode
+
+To use `prefers-color-scheme` globally instead of a `.dark` class, set the `dark` option to `'media'`:
+
+```ts
+presetWind3({
+  dark: 'media'
+})
+```
+
+Now `dark:bg-red:10` generates:
+
+```css
+@media (prefers-color-scheme: dark) {
+  .dark\:bg-red\:10 {
+    background-color: rgb(248 113 113 / 0.1);
+  }
+}
+```
+
+#### Opt-in media query dark mode
+
+For per-element opt-in to media query dark mode, use the `@dark:` variant:
+
+```html
+<div class="@dark:bg-red:10" />
+```
+
+```css
+@media (prefers-color-scheme: dark) {
+  .\@dark\:bg-red\:10 {
+    background-color: rgb(248 113 113 / 0.1);
+  }
+}
+```
+
+### Animations
+
+This preset fully supports Tailwind CSS animation rules and also integrates [Animate.css](https://github.com/animate-css/animate.css) for a wider selection of effects. Use the `animate-` prefix to browse available animations.
+
+<Tip>
+Conflicting animation names between Tailwind and Animate.css are not merged. Use `animate-<name>-alt` to access the Animate.css version. For example, `animate-bounce-alt` uses the Animate.css bounce instead of Tailwind's.
+</Tip>
+
+You can also define fully custom animations through the theme:
+
+```ts
+export default defineConfig({
+  theme: {
+    animation: {
+      keyframes: {
+        custom: '{0%, 100% { transform: scale(0.5); } 50% { transform: scale(1); }}',
+      },
+      durations: {
+        custom: '1s',
+      },
+      timingFns: {
+        custom: 'cubic-bezier(0.4,0,.6,1)',
+      },
+      properties: {
+        custom: { 'transform-origin': 'center' },
+      },
+      counts: {
+        custom: 'infinite',
+      },
+    }
+  }
+})
+```
+
+## Differences from Tailwind CSS
+
+### Quotes in templates
+
+Using quotes inside template strings is not supported due to how UnoCSS's extractor works. For example, `before:content-['']` will not be picked up. Instead, define a custom utility:
+
+```html
+<!-- Not supported -->
+<div class="before:content-['']" />
+
+<!-- Use a custom utility instead -->
+<div class="before:content-empty" />
+```
+
+### Background position with arbitrary values
+
+Tailwind allows bare arbitrary values for `background-position`:
+
+```html
+<!-- Tailwind CSS -->
+<div class="bg-[center_top_1rem]"></div>
+```
+
+In this preset, that bare syntax is interpreted as a color. Use the `position:` prefix instead:
+
+```html
+<!-- UnoCSS / preset-wind3 -->
+<div class="bg-[position:center_top_1rem]"></div>
+```
+
+### Breakpoints (vs Windi CSS)
+
+| Windi CSS | UnoCSS |
+|---|---|
+| `<sm:p-1` | `lt-sm:p-1` |
+| `@lg:p-1` | `at-lg:p-1` |
+| `>xl:p-1` | `xl:p-1` |
+
+### Bracket syntax spaces (vs Windi CSS)
+
+This preset uses `_` instead of `,` to represent spaces inside bracket syntax.
+
+| Windi CSS | UnoCSS |
+|---|---|
+| `grid-cols-[1fr,10px,max-content]` | `grid-cols-[1fr_10px_max-content]` |
+
+Note: commas are still used where CSS requires them, e.g. `grid-cols-[repeat(3,auto)]`.
+
+## Options
+
+### `dark`
+
+- **Type:** `'class' | 'media' | DarkModeSelectors`
+- **Default:** `'class'`
+
+Controls how the `dark:` variant is generated. Pass `'media'` to use `prefers-color-scheme`, or a `DarkModeSelectors` object to use custom selectors.
+
+### `important`
+
+- **Type:** `boolean | string`
+- **Default:** `false`
+
+Mark all generated utilities with `!important`. Setting this to a CSS ID selector (e.g. `'#app'`) scopes all utilities under that selector instead, increasing specificity without using `!important`:
+
+```ts
+presetWind3({
+  important: '#app',
+})
+```
+
+The utility `dark:bg-blue` then outputs:
+
+```css
+#app :is(.dark .dark\:bg-blue) {
+  --un-bg-opacity: 1;
+  background-color: rgb(96 165 250 / var(--un-bg-opacity));
+}
+```
+
+<Warning>
+Using `important: true` applies `!important` to every generated utility. Use the `important:` variant prefix on individual classes if you only need it selectively.
+</Warning>
+
+## Preset Wind4 (experimental)
+
+`@unocss/preset-wind4` is an experimental preset targeting Tailwind CSS v4 compatibility. It is compatible with all features of `preset-wind3` and extends them further with updated theme key names and improved CSS variable output.
+
+<Warning>
+`preset-wind4` is experimental and may change in breaking ways. It also uses the `oklch` color model, making it incompatible with `presetLegacyCompat`.
+</Warning>
+
+```ts
+import { defineConfig, presetWind4 } from 'unocss'
+
+export default defineConfig({
+  presets: [
+    presetWind4(),
+  ],
+})
+```
+
+Key differences from `preset-wind3`:
+
+- Updated theme key names (e.g. `fontFamily` → `font`, `borderRadius` → `radius`)
+- Built-in reset styles — no need for `@unocss/reset`
+- Theme CSS variables generated on-demand via the `theme` layer
+- `@property` declarations via the `properties` layer for better performance
+- Built-in rem-to-px conversion support
